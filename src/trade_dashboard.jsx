@@ -56,6 +56,7 @@ const TABS = [
   { id: "dashboard", label: "대시보드" },
   { id: "auto", label: "자동매매" },
   { id: "closing", label: "⚡ 종가베팅" },
+  { id: "yw-pick", label: "⭐ YW's Pick" },
   { id: "portfolio", label: "포트폴리오" },
   { id: "log", label: "로그" },
 ];
@@ -87,6 +88,21 @@ const WATCH_TICKERS = [
   { ticker: "068270.KS", name: "셀트리온" },
   { ticker: "207940.KS", name: "삼성바이오로직스" },
 ];
+
+// YW's Pick 전용 스캔 종목 (더 넓은 유니버스)
+const YW_PICK_TICKERS = [
+  ...WATCH_TICKERS,
+  { ticker: "035720.KS", name: "카카오" },
+  { ticker: "000270.KS", name: "기아" },
+  { ticker: "005380.KS", name: "현대차" },
+  { ticker: "066570.KS", name: "LG전자" },
+  { ticker: "055550.KS", name: "신한지주" },
+  { ticker: "105560.KS", name: "KB금융" },
+  { ticker: "028260.KS", name: "삼성물산" },
+  { ticker: "096770.KS", name: "SK이노베이션" },
+  { ticker: "011170.KS", name: "롯데케미칼" },
+  { ticker: "009150.KS", name: "삼성전기" },
+].filter((v, i, a) => a.findIndex(t => t.ticker === v.ticker) === i); // 중복 제거
 
 // ════════════════════════════════════════════════════════
 //  2. Mock 데이터
@@ -176,6 +192,34 @@ const buildReason = (rsi, volRate, bbLabel) => {
   return parts.join(" · ") || "특이 신호 없음";
 };
 
+// ────────────────────────────────────────────────────────
+//  엔벨로프 계산
+//  · MA(period) 기준으로 상한(+k%) / 하한(-k%) 밴드 산출
+//  · proximity: 현재가가 하한선에서 얼마나 가까운지 (0=하한 이탈, 100=상한 도달)
+//  · distPct  : 현재가 vs 하한선 이격률 (음수일수록 하한 아래)
+// ────────────────────────────────────────────────────────
+function calcEnvelope(closes, period = 20, kPct = 5) {
+  if (closes.length < period) return null;
+  const slice = closes.slice(-period);
+  const ma = slice.reduce((a, b) => a + b, 0) / period;
+  const upper = ma * (1 + kPct / 100);
+  const lower = ma * (1 - kPct / 100);
+  const last = closes[closes.length - 1];
+
+  // 밴드 전체 폭 대비 현재가 위치 (0~100)
+  const proximity = Math.round(((last - lower) / (upper - lower)) * 100);
+  // 현재가가 하한선 대비 몇 % 위/아래인지
+  const distPct = ((last - lower) / lower) * 100;
+
+  const label =
+    distPct < -1 ? "하한 이탈" :
+      distPct < 1 ? "하한 근접" :
+        distPct < 3 ? "하한 접근" :
+          proximity > 90 ? "상한 근접" : "중립";
+
+  return { ma, upper, lower, proximity: Math.max(0, Math.min(100, proximity)), distPct, label, kPct, period };
+}
+
 // ════════════════════════════════════════════════════════
 //  5. Yahoo Finance API
 // ════════════════════════════════════════════════════════
@@ -194,8 +238,18 @@ async function fetchYahooQuote(ticker) {
   const volRate = Math.round((lastVol / (volumes.slice(-20).reduce((a, b) => a + b, 0) / 20)) * 100);
   const rsi = calcRSI(closes);
   const bb = calcBB(closes);
+  const env = calcEnvelope(closes);          // 엔벨로프 추가
   const score = calcScore(rsi, volRate, bb.pos);
-  return { price, prevClose, changeRate, volume: lastVol, volRate, tradingValue: Math.round(price * lastVol), rsi, bb: bb.label, bbPos: bb.pos, score, signal: getSignal(score), reason: buildReason(rsi, volRate, bb.label) };
+  return {
+    price, prevClose, changeRate,
+    volume: lastVol, volRate,
+    tradingValue: Math.round(price * lastVol),
+    rsi, bb: bb.label, bbPos: bb.pos,
+    env,                                      // 엔벨로프 데이터
+    score, signal: getSignal(score),
+    reason: buildReason(rsi, volRate, bb.label),
+    closes,                                   // 차트용 원시 데이터
+  };
 }
 
 // ════════════════════════════════════════════════════════
@@ -548,7 +602,330 @@ function RankRow({ s, idx, valueKey, C }) {
 }
 
 // ════════════════════════════════════════════════════════
-//  11. 종가베팅 탭
+//  11. YW's Pick 탭  — 엔벨로프 하한 근접 종목 스캐너
+// ════════════════════════════════════════════════════════
+
+// Mock fallback (API 실패 시)
+const MOCK_YW_PICKS = [
+  { ticker: "005930.KS", name: "삼성전자", price: 74800, changeRate: 1.63, rsi: 42, closes: [], env: { ma: 77200, upper: 81060, lower: 73340, proximity: 20, distPct: 1.98, label: "하한 접근", kPct: 5, period: 20 } },
+  { ticker: "000660.KS", name: "SK하이닉스", price: 189500, changeRate: -1.30, rsi: 34, closes: [], env: { ma: 198000, upper: 207900, lower: 188100, proximity: 8, distPct: 0.74, label: "하한 근접", kPct: 5, period: 20 } },
+  { ticker: "006400.KS", name: "삼성SDI", price: 283000, changeRate: -2.73, rsi: 31, closes: [], env: { ma: 298000, upper: 312900, lower: 283100, proximity: 1, distPct: -0.04, label: "하한 이탈", kPct: 5, period: 20 } },
+  { ticker: "051910.KS", name: "LG화학", price: 312500, changeRate: 1.79, rsi: 48, closes: [], env: { ma: 318000, upper: 333900, lower: 302100, proximity: 31, distPct: 3.44, label: "하한 접근", kPct: 5, period: 20 } },
+  { ticker: "066570.KS", name: "LG전자", price: 98200, changeRate: -0.61, rsi: 38, closes: [], env: { ma: 103000, upper: 108150, lower: 97850, proximity: 12, distPct: 0.36, label: "하한 근접", kPct: 5, period: 20 } },
+  { ticker: "011170.KS", name: "롯데케미칼", price: 91400, changeRate: -1.82, rsi: 29, closes: [], env: { ma: 97000, upper: 101850, lower: 92150, proximity: 4, distPct: -0.81, label: "하한 이탈", kPct: 5, period: 20 } },
+];
+
+// 엔벨로프 하한 근접 점수 (proximity 낮을수록 고점수)
+function calcPickScore(env, rsi) {
+  if (!env) return 0;
+  let score = 100 - env.proximity;
+  if (env.distPct < 0) score += 15;
+  else if (env.distPct < 1) score += 8;
+  if (rsi < 30) score += 15;
+  else if (rsi < 40) score += 8;
+  return Math.min(100, Math.round(score));
+}
+
+function pickLabel(env) {
+  if (!env) return { text: "—", color: null };
+  return ({
+    "하한 이탈": { text: "🔥 하한 이탈", color: "#ef4444" },
+    "하한 근접": { text: "⚡ 하한 근접", color: "#f0b429" },
+    "하한 접근": { text: "▼ 하한 접근", color: "#26c96f" },
+    "상한 근접": { text: "▲ 상한 근접", color: "#4a7a9b" },
+    "중립": { text: "◆ 중립", color: null },
+  }[env.label] ?? { text: env.label, color: null });
+}
+
+function EnvelopeBar({ env, C }) {
+  if (!env) return null;
+  const pct = Math.max(1, Math.min(99, env.proximity));
+  const dotColor = env.distPct < 0 ? C.red : env.distPct < 1 ? C.yellow : env.distPct < 3 ? C.green : C.muted;
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 3 }}>
+        <span>하한 -{env.kPct}%</span><span>MA{env.period}</span><span>상한 +{env.kPct}%</span>
+      </div>
+      <div style={{ position: "relative", height: 6, borderRadius: 3, background: `linear-gradient(to right, ${C.green}30, ${C.muted}20, ${C.red}20)` }}>
+        <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 10, background: C.border }} />
+        <div style={{ position: "absolute", left: `${pct}%`, top: -3, transform: "translateX(-50%)", width: 12, height: 12, borderRadius: "50%", background: dotColor, border: `2px solid ${C.panel}`, boxShadow: `0 0 6px ${dotColor}` }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginTop: 5 }}>
+        <span style={{ color: dotColor, fontFamily: FONTS.mono, fontWeight: 600 }}>
+          {env.distPct >= 0 ? "+" : ""}{env.distPct.toFixed(2)}% (하한 대비)
+        </span>
+        <span>MA {fmt(Math.round(env.ma))}</span>
+      </div>
+    </div>
+  );
+}
+
+function PickCard({ s, rank, C }) {
+  const pickScore = calcPickScore(s.env, s.rsi);
+  const lbl = pickLabel(s.env);
+  const scoreCol = pickScore >= 90 ? C.red : pickScore >= 75 ? C.yellow : C.green;
+  const medals = ["🥇", "🥈", "🥉"];
+  return (
+    <div style={{ background: C.panel, border: `1px solid ${rank < 3 ? scoreCol : C.border}`, borderRadius: 8, padding: 16, position: "relative", boxShadow: rank < 3 ? `0 0 14px ${scoreCol}18` : "none" }}>
+      {/* 순위 배지 */}
+      <div style={{ position: "absolute", top: -10, left: 14, fontSize: rank < 3 ? 18 : 12, lineHeight: 1 }}>
+        {rank < 3
+          ? medals[rank]
+          : <span style={{ background: C.panelAlt, border: `1px solid ${C.border}`, borderRadius: 20, padding: "1px 7px", fontSize: 10, color: C.muted, fontFamily: FONTS.mono }}>#{rank + 1}</span>}
+      </div>
+      {/* 점수 원형 */}
+      <div style={{ position: "absolute", top: 10, right: 12, width: 44, height: 44, borderRadius: "50%", background: `${scoreCol}12`, border: `2px solid ${scoreCol}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 13, color: scoreCol, lineHeight: 1 }}>{pickScore}</span>
+        <span style={{ fontSize: 8, color: C.muted }}>점</span>
+      </div>
+      {/* 종목명 */}
+      <div style={{ marginTop: 10, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{s.name}</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</span>
+        </div>
+        {lbl.color
+          ? <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40`, fontWeight: 600 }}>{lbl.text}</span>
+          : <span style={{ fontSize: 11, color: C.muted }}>{lbl.text}</span>}
+      </div>
+      {/* 가격 */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 18, color: C.text }}>{fmt(s.price)}</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.changeRate >= 0 ? C.green : C.red }}>
+          {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
+        </span>
+      </div>
+      {/* 엔벨로프 바 */}
+      <div style={{ marginBottom: 12 }}><EnvelopeBar env={s.env} C={C} /></div>
+      {/* 보조 지표 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+        {[
+          ["RSI", s.rsi, s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted],
+          ["하한까지", s.env ? `${Math.abs(s.env.distPct).toFixed(1)}%` : "—", scoreCol],
+          ["MA", s.env ? fmt(Math.round(s.env.ma)) : "—", C.accent],
+        ].map(([label, val, color]) => (
+          <div key={label} style={{ background: C.panelAlt, borderRadius: 4, padding: "5px 8px", textAlign: "center" }}>
+            <div style={{ fontSize: 9, color: C.muted, marginBottom: 2 }}>{label}</div>
+            <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color }}>{val}</div>
+          </div>
+        ))}
+      </div>
+      {/* 힌트 */}
+      <div style={{ fontSize: 11, color: C.muted, borderTop: `1px solid ${C.border}`, paddingTop: 8, lineHeight: 1.5 }}>
+        {s.env?.distPct < 0 ? "💡 하한선 이탈 — 반등 가능성, 추세 확인 필수"
+          : s.env?.distPct < 1 ? "💡 하한선 터치 — 분할 매수 진입 고려 구간"
+            : s.env?.distPct < 3 ? "💡 하한선 접근 중 — 관심 등록 & 추이 관찰"
+              : "💡 밴드 중립 구간 — 대기"}
+      </div>
+    </div>
+  );
+}
+
+function EnvelopeSettings({ period, kPct, setPeriod, setKPct, C }) {
+  return (
+    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
+      <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 14 }}>엔벨로프 파라미터</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 5 }}>이동평균 기간</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[10, 20, 30, 60].map(v => (
+              <button key={v} onClick={() => setPeriod(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${period === v ? C.accent : C.border}`, background: period === v ? `${C.accent}18` : "transparent", color: period === v ? C.accent : C.muted }}>
+                {v}일
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 5 }}>밴드폭 (%)</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[3, 5, 8, 10].map(v => (
+              <button key={v} onClick={() => setKPct(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${kPct === v ? C.yellow : C.border}`, background: kPct === v ? `${C.yellow}18` : "transparent", color: kPct === v ? C.yellow : C.muted }}>
+                ±{v}%
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: C.muted, background: C.panelAlt, borderRadius: 4, padding: "8px 12px", lineHeight: 1.6 }}>
+        <span style={{ color: C.accent, fontWeight: 600 }}>엔벨로프(Envelope)</span>란 이동평균(MA)을 중심으로
+        상·하 일정 % 채널을 그려 <span style={{ color: C.green }}>하한 지지</span> / <span style={{ color: C.red }}>상한 저항</span>을 포착하는 추세 지표입니다.
+      </div>
+    </div>
+  );
+}
+
+function YwPickTab({ C }) {
+  const S = makeS(C);
+  const [stocks, setStocks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [envPeriod, setEnvPeriod] = useState(20);
+  const [envKPct, setEnvKPct] = useState(5);
+  const [filterLabel, setFilterLabel] = useState("전체");
+
+  const loadData = async () => {
+    setLoading(true); setError(null);
+    try {
+      const results = await Promise.allSettled(
+        YW_PICK_TICKERS.map(t => fetchYahooQuote(t.ticker).then(d => ({ ...d, ...t })))
+      );
+      const ok = results.filter(r => r.status === "fulfilled").map(r => r.value);
+      if (!ok.length) throw new Error("데이터를 불러올 수 없습니다");
+      setStocks(ok); setLastUpdated(new Date());
+    } catch (e) {
+      setError(e.message); setStocks(MOCK_YW_PICKS);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { loadData(); }, []);
+
+  // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산 (API 재호출 없이)
+  const computed = stocks.map(s => ({
+    ...s,
+    env: s.closes?.length ? calcEnvelope(s.closes, envPeriod, envKPct) : s.env,
+  }));
+
+  const FILTER_LABELS = ["전체", "하한 이탈", "하한 근접", "하한 접근"];
+  const filtered = computed
+    .filter(s => filterLabel === "전체" || s.env?.label === filterLabel)
+    .sort((a, b) => (a.env?.proximity ?? 999) - (b.env?.proximity ?? 999));
+  const topPicks = filtered.slice(0, 3);
+  const restPicks = filtered.slice(3);
+
+  const statItems = [
+    { label: "스캔 종목", value: loading ? "…" : `${computed.length}개`, color: C.accent },
+    { label: "하한 이탈", value: loading ? "…" : `${computed.filter(s => s.env?.label === "하한 이탈").length}개`, color: C.red },
+    { label: "하한 근접", value: loading ? "…" : `${computed.filter(s => s.env?.label === "하한 근접").length}개`, color: C.yellow },
+    { label: "하한 접근", value: loading ? "…" : `${computed.filter(s => s.env?.label === "하한 접근").length}개`, color: C.green },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
+      {loading && stocks.length === 0 && <LoadingOverlay message={`${YW_PICK_TICKERS.length}개 종목 엔벨로프 스캔 중…`} C={C} />}
+
+      {/* 헤더 배너 */}
+      <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: 18, fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ YW's Pick</div>
+          <div style={{ fontSize: 12, color: C.muted }}>엔벨로프 하한선 기준 · 지지구간 근접 종목 자동 선별</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {lastUpdated && <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+          <button onClick={loadData} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: 11, cursor: loading ? "not-allowed" : "pointer", border: `1px solid ${loading ? C.border : C.yellow}`, background: loading ? "transparent" : `${C.yellow}15`, color: loading ? C.muted : C.yellow, opacity: loading ? 0.6 : 1 }}>
+            {loading ? <><div className="spin" style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow, flexShrink: 0 }} />스캔 중…</> : "🔍 재스캔"}
+          </button>
+        </div>
+      </div>
+
+      {/* 요약 카드 */}
+      <div style={S.grid("repeat(4,1fr)")}>
+        {statItems.map(({ label, value, color }) => <StatCard key={label} label={label} value={value} color={color} C={C} />)}
+      </div>
+
+      {/* 설정 + 필터 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 12, alignItems: "start" }}>
+        <EnvelopeSettings period={envPeriod} kPct={envKPct} setPeriod={setEnvPeriod} setKPct={setEnvKPct} C={C} />
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
+          <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 10 }}>필터</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {FILTER_LABELS.map(f => {
+              const lbl = pickLabel({ label: f });
+              const active = filterLabel === f;
+              const col = lbl.color || C.accent;
+              return (
+                <button key={f} onClick={() => setFilterLabel(f)} style={{ padding: "6px 12px", borderRadius: 4, fontSize: 12, cursor: "pointer", textAlign: "left", border: `1px solid ${active ? col : C.border}`, background: active ? `${col}15` : "transparent", color: active ? col : C.muted, fontWeight: active ? 600 : 400 }}>
+                  {f === "전체" ? "◈ 전체" : lbl.text}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ background: `${C.red}10`, border: `1px solid ${C.red}40`, borderRadius: 6, padding: 12, fontSize: 12, color: C.red }}>
+          ⚠ {error} — Mock 데이터로 표시 중입니다.
+        </div>
+      )}
+
+      {/* TOP 3 카드 */}
+      {loading
+        ? <div style={S.grid("repeat(3,1fr)")}>{[0, 1, 2].map(i => <SkeletonCard key={i} C={C} />)}</div>
+        : topPicks.length > 0 && (
+          <div>
+            <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.yellow, letterSpacing: 2, marginBottom: 10 }}>▶ TOP PICKS — 하한 최근접 종목</div>
+            <div className="fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
+              {topPicks.map((s, i) => <PickCard key={s.ticker} s={s} rank={i} C={C} />)}
+            </div>
+          </div>
+        )
+      }
+
+      {/* 나머지 테이블 */}
+      {!loading && restPicks.length > 0 && (
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1 }}>전체 스캔 결과</span>
+            <span style={{ fontSize: 10, color: C.muted }}>— 하한 근접 순 정렬</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
+            {["종목", "현재가", "등락률", "RSI", "엔벨로프 위치", "상태"].map(h => (
+              <span key={h} style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{h}</span>
+            ))}
+          </div>
+          <div className="fade-in">
+            {restPicks.map((s, i) => {
+              const lbl = pickLabel(s.env);
+              const ps = calcPickScore(s.env, s.rsi);
+              const scoreCol = ps >= 90 ? C.red : ps >= 75 ? C.yellow : C.green;
+              return (
+                <div key={s.ticker} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: C.text }}>{s.name}</div>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</div>
+                  </div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: C.text }}>{fmt(s.price)}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.changeRate >= 0 ? C.green : C.red }}>
+                    {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
+                  </div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted }}>{s.rsi}</div>
+                  <div style={{ paddingRight: 8 }}>
+                    <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right,${C.green}30,${C.muted}15,${C.red}15)` }}>
+                      <div style={{ position: "absolute", left: `${Math.max(1, Math.min(99, s.env?.proximity ?? 50))}%`, top: -3, width: 10, height: 10, transform: "translateX(-50%)", borderRadius: "50%", background: scoreCol, border: `2px solid ${C.panel}` }} />
+                    </div>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted, marginTop: 3 }}>
+                      {s.env ? `${s.env.distPct >= 0 ? "+" : ""}${s.env.distPct.toFixed(2)}%` : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    {lbl.color
+                      ? <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40` }}>{lbl.text}</span>
+                      : <span style={{ fontSize: 10, color: C.muted }}>{lbl.text}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted, background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6 }}>
+          해당 조건의 종목이 없습니다.
+        </div>
+      )}
+
+      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 14px", display: "flex", gap: 8, fontSize: 11, color: C.muted }}>
+        <span style={{ color: C.yellow }}>⚠</span>
+        <span>엔벨로프 MA{envPeriod} ±{envKPct}% 기준 하한 근접 종목 자동 선별입니다. 하한 지지는 추세 하락 시 무의미할 수 있으므로 RSI·거래량을 병행 확인하세요. 투자 판단은 본인 책임입니다.</span>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  12. 종가베팅 탭
 // ════════════════════════════════════════════════════════
 
 function ClosingTab({ C }) {
@@ -811,7 +1188,7 @@ export default function StockDashboard() {
   const totalEval = holdings.reduce((s, h) => s + h.qty * h.currentPrice, 0);
   const totalProfit = holdings.reduce((s, h) => s + h.qty * (h.currentPrice - h.avgPrice), 0);
   const placeOrder = side => setLogs(prev => [{ time: fmtTime(new Date()), type: side, msg: `${selectedStock.name} ${orderQty}주 ${side === "buy" ? "매수" : "매도"} @ ${fmt(orderPrice)}` }, ...prev]);
-  const tabAccent = t => t === "closing" ? C.yellow : C.accent;
+  const tabAccent = t => t === "closing" ? C.yellow : t === "yw-pick" ? C.yellow : C.accent;
 
   return (
     <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text, fontSize: 13 }}>
@@ -1006,6 +1383,9 @@ export default function StockDashboard() {
 
         {/* ━━━ 종가베팅 ━━━ */}
         {tab === "closing" && <ClosingTab C={C} />}
+
+        {/* ━━━ YW's Pick ━━━ */}
+        {tab === "yw-pick" && <YwPickTab C={C} />}
 
         {/* ━━━ 포트폴리오 ━━━ */}
         {tab === "portfolio" && (
