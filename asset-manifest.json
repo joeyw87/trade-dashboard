@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/trade-dashboard/static/css/main.e6c13ad2.css",
-    "main.js": "/trade-dashboard/static/js/main.9d3eb839.js",
+    "main.js": "/trade-dashboard/static/js/main.64541f94.js",
     "static/js/453.37a81fd6.chunk.js": "/trade-dashboard/static/js/453.37a81fd6.chunk.js",
     "index.html": "/trade-dashboard/index.html",
     "main.e6c13ad2.css.map": "/trade-dashboard/static/css/main.e6c13ad2.css.map",
-    "main.9d3eb839.js.map": "/trade-dashboard/static/js/main.9d3eb839.js.map",
+    "main.64541f94.js.map": "/trade-dashboard/static/js/main.64541f94.js.map",
     "453.37a81fd6.chunk.js.map": "/trade-dashboard/static/js/453.37a81fd6.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.9d3eb839.js"
+    "static/js/main.64541f94.js"
   ]
 }
