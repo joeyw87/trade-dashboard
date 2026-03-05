@@ -77,37 +77,21 @@ const AUTO_STRATEGIES = [
 ];
 
 const WATCH_TICKERS = [
-  { ticker: "005930.KS", name: "삼성전자" },
-  { ticker: "000660.KS", name: "SK하이닉스" },
-  { ticker: "035420.KS", name: "NAVER" },
-  { ticker: "035720.KS", name: "카카오" },
-  { ticker: "051910.KS", name: "LG화학" },
-  { ticker: "006400.KS", name: "삼성SDI" },
-  { ticker: "247540.KS", name: "에코프로비엠" },
-  { ticker: "373220.KS", name: "LG에너지솔루션" },
-  { ticker: "068270.KS", name: "셀트리온" },
-  { ticker: "207940.KS", name: "삼성바이오로직스" },
-];
-
-// YW's Pick 전용 스캔 종목 — 코스피 대형주 50종목
-const YW_PICK_TICKERS = [
   // ── 반도체·IT ──────────────────────────────────────
   { ticker: "005930.KS", name: "삼성전자" },
   { ticker: "000660.KS", name: "SK하이닉스" },
   { ticker: "009150.KS", name: "삼성전기" },
   { ticker: "066570.KS", name: "LG전자" },
-  { ticker: "034730.KS", name: "SK스퀘어" },
-  // ── 인터넷·플랫폼 ───────────────────────────────────
+  // ── 인터넷·플랫폼·게임 ────────────────────────────
   { ticker: "035420.KS", name: "NAVER" },
   { ticker: "035720.KS", name: "카카오" },
   { ticker: "259960.KS", name: "크래프톤" },
   { ticker: "036570.KS", name: "엔씨소프트" },
+  { ticker: "251270.KS", name: "넷마블" },
   // ── 자동차·부품 ─────────────────────────────────────
   { ticker: "005380.KS", name: "현대차" },
   { ticker: "000270.KS", name: "기아" },
   { ticker: "012330.KS", name: "현대모비스" },
-  { ticker: "011210.KS", name: "현대위아" },
-  { ticker: "018880.KS", name: "한온시스템" },
   // ── 2차전지·에너지 ──────────────────────────────────
   { ticker: "373220.KS", name: "LG에너지솔루션" },
   { ticker: "006400.KS", name: "삼성SDI" },
@@ -121,40 +105,98 @@ const YW_PICK_TICKERS = [
   { ticker: "128940.KS", name: "한미약품" },
   { ticker: "000100.KS", name: "유한양행" },
   { ticker: "326030.KS", name: "SK바이오팜" },
-  // ── 금융·보험 ──────────────────────────────────────
+  // ── 금융 ───────────────────────────────────────────
   { ticker: "105560.KS", name: "KB금융" },
   { ticker: "055550.KS", name: "신한지주" },
   { ticker: "086790.KS", name: "하나금융지주" },
   { ticker: "316140.KS", name: "우리금융지주" },
-  { ticker: "032830.KS", name: "삼성생명" },
   { ticker: "000810.KS", name: "삼성화재" },
-  // ── 철강·소재 ──────────────────────────────────────
+  // ── 철강·소재·화학 ──────────────────────────────────
   { ticker: "005490.KS", name: "POSCO홀딩스" },
-  { ticker: "004020.KS", name: "현대제철" },
   { ticker: "011170.KS", name: "롯데케미칼" },
-  { ticker: "006260.KS", name: "LS" },
-  // ── 건설·중공업 ─────────────────────────────────────
-  { ticker: "000720.KS", name: "현대건설" },
-  { ticker: "034020.KS", name: "두산에너빌리티" },
-  { ticker: "047810.KS", name: "한국항공우주" },
+  { ticker: "004020.KS", name: "현대제철" },
+  // ── 건설·중공업·방산 ────────────────────────────────
   { ticker: "012450.KS", name: "한화에어로스페이스" },
-  // ── 유통·소비재 ─────────────────────────────────────
-  { ticker: "028260.KS", name: "삼성물산" },
-  { ticker: "004170.KS", name: "신세계" },
-  { ticker: "023530.KS", name: "롯데쇼핑" },
-  { ticker: "139480.KS", name: "이마트" },
-  // ── 통신 ───────────────────────────────────────────
+  { ticker: "047810.KS", name: "한국항공우주" },
+  { ticker: "034020.KS", name: "두산에너빌리티" },
+  { ticker: "000720.KS", name: "현대건설" },
+  // ── 유통·통신·운송 ──────────────────────────────────
   { ticker: "017670.KS", name: "SK텔레콤" },
   { ticker: "030200.KS", name: "KT" },
-  { ticker: "032640.KS", name: "LG유플러스" },
-  // ── 운송·물류 ──────────────────────────────────────
   { ticker: "003490.KS", name: "대한항공" },
-  { ticker: "086280.KS", name: "현대글로비스" },
   { ticker: "011200.KS", name: "HMM" },
-  // ── 기타 우량주 ─────────────────────────────────────
-  { ticker: "000830.KS", name: "삼성물산우" },
   { ticker: "033780.KS", name: "KT&G" },
 ];
+
+// YW's Pick 전용 스캔 종목 — WATCH_TICKERS + 추가 70종목 (코스피/코스닥 대형주)
+const YW_PICK_TICKERS = [
+  ...WATCH_TICKERS,
+  // ── 추가: 반도체·디스플레이 ────────────────────────
+  { ticker: "034730.KS", name: "SK스퀘어" },
+  { ticker: "000990.KS", name: "DB하이텍" },
+  { ticker: "336370.KS", name: "솔루스첨단소재" },
+  { ticker: "078600.KS", name: "대주전자재료" },
+  // ── 추가: 게임·엔터 ────────────────────────────────
+  { ticker: "251270.KS", name: "넷마블" },
+  { ticker: "041510.KS", name: "에스엠" },
+  { ticker: "035900.KS", name: "JYP Ent." },
+  { ticker: "122870.KS", name: "와이지엔터테인먼트" },
+  // ── 추가: 자동차 부품·모빌리티 ─────────────────────
+  { ticker: "011210.KS", name: "현대위아" },
+  { ticker: "018880.KS", name: "한온시스템" },
+  { ticker: "204320.KS", name: "HL만도" },
+  // ── 추가: 2차전지 소재·장비 ────────────────────────
+  { ticker: "006490.KS", name: "LS MnM" },
+  { ticker: "382800.KS", name: "엔켐" },
+  { ticker: "450080.KS", name: "에코프로" },
+  { ticker: "272290.KS", name: "이노메트리" },
+  // ── 추가: 바이오 ───────────────────────────────────
+  { ticker: "145020.KS", name: "휴젤" },
+  { ticker: "196170.KS", name: "알테오젠" },
+  { ticker: "009420.KS", name: "한미사이언스" },
+  { ticker: "056090.KS", name: "이노테라피" },
+  // ── 추가: 금융·증권 ────────────────────────────────
+  { ticker: "032830.KS", name: "삼성생명" },
+  { ticker: "071050.KS", name: "한국금융지주" },
+  { ticker: "030610.KS", name: "교보증권" },
+  { ticker: "003540.KS", name: "대신증권" },
+  // ── 추가: 철강·소재·화학 ───────────────────────────
+  { ticker: "006260.KS", name: "LS" },
+  { ticker: "010060.KS", name: "OCI홀딩스" },
+  { ticker: "069260.KS", name: "휴켐스" },
+  { ticker: "004000.KS", name: "롯데정밀화학" },
+  // ── 추가: 건설·인프라 ──────────────────────────────
+  { ticker: "000880.KS", name: "한화" },
+  { ticker: "007070.KS", name: "GS리테일" },
+  { ticker: "006360.KS", name: "GS건설" },
+  // ── 추가: 유통·소비 ────────────────────────────────
+  { ticker: "028260.KS", name: "삼성물산" },
+  { ticker: "004170.KS", name: "신세계" },
+  { ticker: "139480.KS", name: "이마트" },
+  { ticker: "023530.KS", name: "롯데쇼핑" },
+  { ticker: "069960.KS", name: "현대백화점" },
+  // ── 추가: 통신·미디어 ──────────────────────────────
+  { ticker: "032640.KS", name: "LG유플러스" },
+  { ticker: "036460.KS", name: "한국가스공사" },
+  { ticker: "015760.KS", name: "한국전력" },
+  // ── 추가: 운송·물류 ────────────────────────────────
+  { ticker: "086280.KS", name: "현대글로비스" },
+  { ticker: "000120.KS", name: "CJ대한통운" },
+  // ── 추가: 음식료·생활 ──────────────────────────────
+  { ticker: "097950.KS", name: "CJ제일제당" },
+  { ticker: "001040.KS", name: "CJ" },
+  { ticker: "010130.KS", name: "고려아연" },
+  { ticker: "008770.KS", name: "호텔신라" },
+  // ── 코스닥 대형주 ───────────────────────────────────
+  { ticker: "091990.KQ", name: "셀트리온헬스케어" },
+  { ticker: "263750.KQ", name: "펄어비스" },
+  { ticker: "293490.KQ", name: "카카오게임즈" },
+  { ticker: "357780.KQ", name: "솔브레인" },
+  { ticker: "140610.KQ", name: "에코프로에이치엔" },
+  { ticker: "214150.KQ", name: "클래시스" },
+  { ticker: "039030.KQ", name: "이오테크닉스" },
+  { ticker: "089490.KQ", name: "세경하이테크" },
+].filter((v, i, a) => a.findIndex(t => t.ticker === v.ticker) === i); // 중복 제거
 
 // ════════════════════════════════════════════════════════
 //  2. Mock 데이터
@@ -408,6 +450,30 @@ function ThemeToggle({ isDark, onToggle, C }) {
 // ════════════════════════════════════════════════════════
 //  8. 공용 소형 컴포넌트
 // ════════════════════════════════════════════════════════
+
+// 진행률 바 + 미니 스피너 공용 컴포넌트
+function ProgressBar({ current, total, accentColor, C }) {
+  const pct = total > 0 ? (current / total) * 100 : 0;
+  const col = accentColor || C.accent;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {/* 미니 이중 스피너 */}
+      <div style={{ position: "relative", width: 16, height: 16, flexShrink: 0 }}>
+        <div className="spin" style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: col }} />
+        <div className="spin" style={{ position: "absolute", inset: 3, borderRadius: "50%", border: `1.5px solid ${C.border}`, borderTopColor: C.yellow, animationDirection: "reverse", animationDuration: "0.6s" }} />
+      </div>
+      {/* 바 + 퍼센트 */}
+      <div style={{ flex: 1 }}>
+        <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: "100%", borderRadius: 2, width: `${pct}%`, background: `linear-gradient(to right, ${col}, ${C.green})`, transition: "width 0.35s ease" }} />
+        </div>
+      </div>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, minWidth: 52, textAlign: "right" }}>
+        {current} / {total}
+      </span>
+    </div>
+  );
+}
 
 function LoadingOverlay({ message, C }) {
   return (
@@ -943,20 +1009,7 @@ function YwPickTab({ C }) {
 
         {/* 진행률 바 — 로딩 중에만 표시 */}
         {loading && (
-          <div>
-            <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{
-                height: "100%", borderRadius: 2,
-                width: `${(loadedCount / YW_PICK_TICKERS.length) * 100}%`,
-                background: `linear-gradient(to right, ${C.yellow}, ${C.accent})`,
-                transition: "width 0.35s ease",
-              }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 10, color: C.muted, fontFamily: FONTS.mono }}>
-              <span>종목 스캔 중…</span>
-              <span>{Math.round((loadedCount / YW_PICK_TICKERS.length) * 100)}%</span>
-            </div>
-          </div>
+          <ProgressBar current={loadedCount} total={YW_PICK_TICKERS.length} accentColor={C.yellow} C={C} />
         )}
       </div>
 
@@ -1259,9 +1312,7 @@ function ClosingTab({ C }) {
         </div>
         {/* 진행률 바 */}
         {loading && (
-          <div style={{ height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 2, width: `${(loadedCount / WATCH_TICKERS.length) * 100}%`, background: `linear-gradient(to right,${C.accent},${C.green})`, transition: "width 0.35s ease" }} />
-          </div>
+          <ProgressBar current={loadedCount} total={WATCH_TICKERS.length} accentColor={C.accent} C={C} />
         )}
       </div>
 
