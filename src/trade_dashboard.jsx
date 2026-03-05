@@ -924,57 +924,17 @@ function EnvelopeSettings({ period, kPct, setPeriod, setKPct, C }) {
   );
 }
 
-function YwPickTab({ C }) {
+function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onReload }) {
   const S = makeS(C);
-  const [stocks, setStocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadedCount, setLoadedCount] = useState(0);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [envPeriod, setEnvPeriod] = useState(20);
   const [envKPct, setEnvKPct] = useState(4);
   const [filterLabel, setFilterLabel] = useState("전체");
 
   // ── 거래량·거래대금 필터 ────────────────────────────────
-  const [volPeriod, setVolPeriod] = useState(5);       // 3일 or 5일
-  const [minVolUnit, setMinVolUnit] = useState("만주");  // "만주" | "억원"
-  const [minVolVal, setMinVolVal] = useState(50);      // 최소 거래량 (만주) or 거래대금 (억원)
-  const [volFilterOn, setVolFilterOn] = useState(true);    // 거래량 필터 ON/OFF
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    setStocks([]);
-    setLoadedCount(0);
-
-    const results = [];
-    let anyOk = false;
-
-    for (const t of YW_PICK_TICKERS) {
-      try {
-        const d = await fetchYahooQuote(t.ticker);
-        const item = { ...d, ...t };
-        anyOk = true;
-        setStocks(prev => [...prev, item]); // 하나 성공할 때마다 화면에 즉시 추가!
-      } catch (err) {
-        console.warn(`${t.ticker} 로드 실패:`, err);
-      } finally {
-        setLoadedCount(prev => prev + 1); // 프로그레스 바 갱신
-      }
-
-      // 프록시 서버가 차단하지 않도록 0.5초(500ms) 휴식
-      await delay(300);
-    }
-
-    if (!anyOk) {
-      setError("모든 종목 데이터를 불러올 수 없습니다");
-      setStocks(MOCK_YW_PICKS);
-    }
-    setLastUpdated(new Date());
-    setLoading(false);
-  };
-
-  useEffect(() => { loadData(); }, []);
+  const [volPeriod, setVolPeriod] = useState(5);
+  const [minVolUnit, setMinVolUnit] = useState("만주");
+  const [minVolVal, setMinVolVal] = useState(50);
+  const [volFilterOn, setVolFilterOn] = useState(true);
 
   // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산
   const computed = stocks.map(s => ({
@@ -1014,6 +974,23 @@ function YwPickTab({ C }) {
     { label: "하한 근접/접근", value: `${passed.filter(s => ["하한 근접", "하한 접근"].includes(s.env?.label)).length}개`, color: C.green },
   ];
 
+  // 아직 한 번도 조회하지 않은 상태
+  if (!loading && stocks.length === 0 && !error) {
+    return (
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:80, gap:20 }} className="slide-in">
+        <div style={{ fontSize:40 }}>⭐</div>
+        <div style={{ fontFamily:FONTS.mono, fontSize:16, fontWeight:700, color:C.yellow }}>YW's Pick</div>
+        <div style={{ fontSize:13, color:C.muted, textAlign:"center", lineHeight:1.7 }}>
+          엔벨로프 하한 근접 종목을 스캔합니다.<br/>
+          <span style={{ fontFamily:FONTS.mono, color:C.muted, fontSize:11 }}>{YW_PICK_TICKERS.length}개 종목 · MA20 ±4%</span>
+        </div>
+        <button onClick={onReload} style={{ padding:"10px 32px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", border:`1px solid ${C.yellow}`, background:`${C.yellow}18`, color:C.yellow, fontFamily:FONTS.mono }}>
+          🔍 스캔 시작
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
 
@@ -1028,7 +1005,7 @@ function YwPickTab({ C }) {
             {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
             {loading
               ? <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.yellow }}>{loadedCount} / {YW_PICK_TICKERS.length} 완료</span>
-              : <button onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>
+              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>
                 🔍 재스캔
               </button>
             }
@@ -1252,48 +1229,11 @@ function YwPickTab({ C }) {
 //  12. 종가베팅 탭
 // ════════════════════════════════════════════════════════
 
-function ClosingTab({ C }) {
+function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onReload }) {
   const S = makeS(C);
-  const [stocks, setStocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadedCount, setLoadedCount] = useState(0);
-  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("전체");
   const [sortBy, setSortBy] = useState("score");
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [section, setSection] = useState("recommend");
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    setStocks([]);
-    setLoadedCount(0);
-
-    let anyOk = false;
-
-    for (const t of WATCH_TICKERS) {
-      try {
-        const d = await fetchYahooQuote(t.ticker);
-        anyOk = true;
-        setStocks(prev => [...prev, { ...d, ...t }]);
-      } catch (err) {
-        console.warn(`${t.ticker} 로드 실패:`, err);
-      } finally {
-        setLoadedCount(prev => prev + 1);
-      }
-
-      // 0.5초 딜레이
-      await delay(300);
-    }
-
-    if (!anyOk) {
-      setError("데이터를 불러올 수 없습니다");
-      setStocks(MOCK_CLOSING);
-    }
-    setLastUpdated(new Date());
-    setLoading(false);
-  };
-  useEffect(() => { loadData(); }, []);
 
   const SORT_FN = { score: (a, b) => b.score - a.score, volRate: (a, b) => b.volRate - a.volRate, changeRate: (a, b) => Math.abs(b.changeRate) - Math.abs(a.changeRate) };
   const filtered = stocks.filter(s => filter === "전체" || s.signal === filter).sort(SORT_FN[sortBy]);
@@ -1310,6 +1250,23 @@ function ClosingTab({ C }) {
     color: active ? activeColor : C.muted,
     fontWeight: active ? 600 : 400,
   });
+
+  // 아직 한 번도 조회하지 않은 상태
+  if (!loading && stocks.length === 0 && !error) {
+    return (
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:80, gap:20 }} className="slide-in">
+        <div style={{ fontSize:40 }}>⚡</div>
+        <div style={{ fontFamily:FONTS.mono, fontSize:16, fontWeight:700, color:C.yellow }}>종가베팅</div>
+        <div style={{ fontSize:13, color:C.muted, textAlign:"center", lineHeight:1.7 }}>
+          RSI · 볼린저밴드 · 거래량을 복합 분석해 종가 매수 후보를 선별합니다.<br/>
+          <span style={{ fontFamily:FONTS.mono, color:C.muted, fontSize:11 }}>{WATCH_TICKERS.length}개 종목 스캔</span>
+        </div>
+        <button onClick={onReload} style={{ padding:"10px 32px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", border:`1px solid ${C.yellow}`, background:`${C.yellow}18`, color:C.yellow, fontFamily:FONTS.mono }}>
+          ⚡ 조회 시작
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-in">
@@ -1334,7 +1291,7 @@ function ClosingTab({ C }) {
             {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
             {loading
               ? <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.accent }}>{loadedCount} / {WATCH_TICKERS.length} 로드</span>
-              : <button onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.accent}`, background: `${C.accent}15`, color: C.accent }}>
+              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.accent}`, background: `${C.accent}15`, color: C.accent }}>
                 🔄 새로고침
               </button>
             }
@@ -1539,6 +1496,64 @@ export default function StockDashboard() {
   const [time, setTime] = useState(new Date());
   const [prices, setPrices] = useState(MOCK_STOCKS.map(s => [s.price]));
 
+  // ── 종가베팅 데이터 (탭 이동해도 유지) ─────────────────
+  const [closingStocks,      setClosingStocks]      = useState([]);
+  const [closingLoading,     setClosingLoading]     = useState(false);
+  const [closingLoadedCount, setClosingLoadedCount] = useState(0);
+  const [closingError,       setClosingError]       = useState(null);
+  const [closingLastUpdated, setClosingLastUpdated] = useState(null);
+  const [closingFetched,     setClosingFetched]     = useState(false); // 최초 1회 플래그
+
+  const loadClosingData = async () => {
+    setClosingLoading(true);
+    setClosingError(null);
+    setClosingStocks([]);
+    setClosingLoadedCount(0);
+    let anyOk = false;
+    for (const t of WATCH_TICKERS) {
+      try {
+        const d = await fetchYahooQuote(t.ticker);
+        anyOk = true;
+        setClosingStocks(prev => [...prev, { ...d, ...t }]);
+      } catch (err) { console.warn(`${t.ticker} 실패:`, err); }
+      finally { setClosingLoadedCount(prev => prev + 1); }
+      await delay(300);
+    }
+    if (!anyOk) { setClosingError("데이터를 불러올 수 없습니다"); setClosingStocks(MOCK_CLOSING); }
+    setClosingLastUpdated(new Date());
+    setClosingLoading(false);
+    setClosingFetched(true);
+  };
+
+  // ── YW's Pick 데이터 (탭 이동해도 유지) ─────────────────
+  const [ywStocks,      setYwStocks]      = useState([]);
+  const [ywLoading,     setYwLoading]     = useState(false);
+  const [ywLoadedCount, setYwLoadedCount] = useState(0);
+  const [ywError,       setYwError]       = useState(null);
+  const [ywLastUpdated, setYwLastUpdated] = useState(null);
+  const [ywFetched,     setYwFetched]     = useState(false); // 최초 1회 플래그
+
+  const loadYwData = async () => {
+    setYwLoading(true);
+    setYwError(null);
+    setYwStocks([]);
+    setYwLoadedCount(0);
+    let anyOk = false;
+    for (const t of YW_PICK_TICKERS) {
+      try {
+        const d = await fetchYahooQuote(t.ticker);
+        anyOk = true;
+        setYwStocks(prev => [...prev, { ...d, ...t }]);
+      } catch (err) { console.warn(`${t.ticker} 실패:`, err); }
+      finally { setYwLoadedCount(prev => prev + 1); }
+      await delay(300);
+    }
+    if (!anyOk) { setYwError("모든 종목 데이터를 불러올 수 없습니다"); setYwStocks(MOCK_YW_PICKS); }
+    setYwLastUpdated(new Date());
+    setYwLoading(false);
+    setYwFetched(true);
+  };
+
   useEffect(() => {
     const t = setInterval(() => {
       setTime(new Date());
@@ -1564,7 +1579,11 @@ export default function StockDashboard() {
           </div>
           <div style={{ width: 1, height: 20, background: C.border }} />
           {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : C.muted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent" }}>
+            <button key={t.id} onClick={() => {
+              setTab(t.id);
+              if (t.id === "closing" && !closingFetched && !closingLoading) loadClosingData();
+              if (t.id === "yw-pick" && !ywFetched && !ywLoading) loadYwData();
+            }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : C.muted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent" }}>
               {t.label}
             </button>
           ))}
@@ -1744,10 +1763,10 @@ export default function StockDashboard() {
         )}
 
         {/* ━━━ 종가베팅 ━━━ */}
-        {tab === "closing" && <ClosingTab C={C} />}
+        {tab === "closing" && <ClosingTab C={C} stocks={closingStocks} loading={closingLoading} loadedCount={closingLoadedCount} error={closingError} lastUpdated={closingLastUpdated} onReload={loadClosingData} />}
 
         {/* ━━━ YW's Pick ━━━ */}
-        {tab === "yw-pick" && <YwPickTab C={C} />}
+        {tab === "yw-pick" && <YwPickTab C={C} stocks={ywStocks} loading={ywLoading} loadedCount={ywLoadedCount} error={ywError} lastUpdated={ywLastUpdated} onReload={loadYwData} />}
 
         {/* ━━━ 포트폴리오 ━━━ */}
         {tab === "portfolio" && (
