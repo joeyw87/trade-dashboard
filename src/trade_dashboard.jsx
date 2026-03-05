@@ -196,6 +196,18 @@ const YW_PICK_TICKERS = [
   { ticker: "214150.KQ", name: "클래시스" },
   { ticker: "039030.KQ", name: "이오테크닉스" },
   { ticker: "089490.KQ", name: "세경하이테크" },
+  // ── 추가: 엄마픽 ───────────────────────────────────
+  { ticker: "042700.KS", name: "한미반도체" },
+  { ticker: "277810.KQ", name: "레인보우로보틱스" },
+  { ticker: "058470.KQ", name: "리노공업" },
+  { ticker: "240810.KQ", name: "원익IPS" },
+  { ticker: "000720.KS", name: "현대건설" },
+  { ticker: "006400.KS", name: "삼성SDI" },
+  { ticker: "034020.KS", name: "두산에너빌리티" },
+  { ticker: "005380.KS", name: "현대차" },
+  { ticker: "298380.KQ", name: "에이비엘바이오" },
+  { ticker: "950160.KQ", name: "코오롱티슈진" },
+  { ticker: "310210.KQ", name: "보로노이" },
 ].filter((v, i, a) => a.findIndex(t => t.ticker === v.ticker) === i); // 중복 제거
 
 // ════════════════════════════════════════════════════════
@@ -321,9 +333,23 @@ function calcEnvelope(closes, period = 20, kPct = 5) {
 // ════════════════════════════════════════════════════════
 
 async function fetchYahooQuote(ticker) {
+  /*
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=3mo`;
   const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  
   const chart = JSON.parse((await (await fetch(proxy)).json()).contents).chart.result[0];
+  */
+
+  //로컬 백엔드 사용
+  //const myProxyUrl = `http://localhost:3001/api/yahoo?ticker=${ticker}`;
+  //무료 클라우드 render 사용
+  const myProxyUrl = `https://trade-backend-3o2e.onrender.com/api/yahoo?ticker=${ticker}`;
+  const response = await fetch(myProxyUrl);
+  if (!response.ok) throw new Error("네트워크 응답이 좋지 않습니다.");
+  const data = await response.json();
+  const chart = data.chart.result[0];
+  //로컬 백엔드 종료
+  
   const closes = chart.indicators.quote[0].close.filter(Boolean);
   const volumes = chart.indicators.quote[0].volume.filter(Boolean);
   const prices = chart.indicators.quote[0].close.filter(Boolean); // closes와 동일
@@ -936,7 +962,7 @@ function YwPickTab({ C }) {
         setLoadedCount(prev => prev + 1); // 프로그레스 바 갱신
       }
 
-      // 프록시 서버가 차단하지 않도록 0.3초(300ms) 휴식
+      // 프록시 서버가 차단하지 않도록 0.5초(500ms) 휴식
       await delay(300);
     }
 
@@ -1256,7 +1282,7 @@ function ClosingTab({ C }) {
         setLoadedCount(prev => prev + 1);
       }
 
-      // 0.3초 딜레이
+      // 0.5초 딜레이
       await delay(300);
     }
 
