@@ -239,6 +239,8 @@ const fmtValue = v => {
 const signalColor = (signal, C) => ({ 강력매수: C.green, 매수: C.green, 관망: C.muted, 주의: C.red }[signal] ?? C.muted);
 const signalIcon = signal => ({ 강력매수: "⚡", 매수: "▲", 관망: "◆", 주의: "⚠" }[signal] ?? "");
 const scoreColor = (score, C) => score >= 80 ? C.green : score >= 65 ? C.yellow : C.muted;
+//API 호출 사이의 대기 시간을 만드는 함수
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // ════════════════════════════════════════════════════════
 //  4. 기술적 지표 계산
@@ -922,21 +924,21 @@ function YwPickTab({ C }) {
     const results = [];
     let anyOk = false;
 
-    await Promise.allSettled(
-      YW_PICK_TICKERS.map(t =>
-        fetchYahooQuote(t.ticker)
-          .then(d => {
-            const item = { ...d, ...t };
-            results.push(item);
-            anyOk = true;
-            setStocks(prev => [...prev, item]);
-            setLoadedCount(prev => prev + 1);
-          })
-          .catch(() => {
-            setLoadedCount(prev => prev + 1);
-          })
-      )
-    );
+    for (const t of YW_PICK_TICKERS) {
+      try {
+        const d = await fetchYahooQuote(t.ticker);
+        const item = { ...d, ...t };
+        anyOk = true;
+        setStocks(prev => [...prev, item]); // 하나 성공할 때마다 화면에 즉시 추가!
+      } catch (err) {
+        console.warn(`${t.ticker} 로드 실패:`, err);
+      } finally {
+        setLoadedCount(prev => prev + 1); // 프로그레스 바 갱신
+      }
+
+      // 프록시 서버가 차단하지 않도록 0.3초(300ms) 휴식
+      await delay(300);
+    }
 
     if (!anyOk) {
       setError("모든 종목 데이터를 불러올 수 없습니다");
@@ -1242,19 +1244,21 @@ function ClosingTab({ C }) {
     setLoadedCount(0);
 
     let anyOk = false;
-    await Promise.allSettled(
-      WATCH_TICKERS.map(t =>
-        fetchYahooQuote(t.ticker)
-          .then(d => {
-            anyOk = true;
-            setStocks(prev => [...prev, { ...d, ...t }]);
-            setLoadedCount(prev => prev + 1);
-          })
-          .catch(() => {
-            setLoadedCount(prev => prev + 1);
-          })
-      )
-    );
+
+    for (const t of WATCH_TICKERS) {
+      try {
+        const d = await fetchYahooQuote(t.ticker);
+        anyOk = true;
+        setStocks(prev => [...prev, { ...d, ...t }]);
+      } catch (err) {
+        console.warn(`${t.ticker} 로드 실패:`, err);
+      } finally {
+        setLoadedCount(prev => prev + 1);
+      }
+
+      // 0.3초 딜레이
+      await delay(300);
+    }
 
     if (!anyOk) {
       setError("데이터를 불러올 수 없습니다");
