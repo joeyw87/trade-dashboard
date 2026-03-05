@@ -966,12 +966,12 @@ function PickCard({ s, rank, C }) {
   const pickScore = calcPickScore(s.env, s.rsi);
   const lbl = pickLabel(s.env);
   const scoreCol = pickScore >= 90 ? C.red : pickScore >= 75 ? C.yellow : C.green;
-  const medals = ["🥇", "🥈", "🥉"];
+  const medals = ["🥇", "🥈", "🥉", "🏅"];
   return (
-    <div style={{ background: C.panel, border: `1px solid ${rank < 3 ? scoreCol : C.border}`, borderRadius: 8, padding: 16, position: "relative", boxShadow: rank < 3 ? `0 0 14px ${scoreCol}18` : "none" }}>
+    <div style={{ background: C.panel, border: `1px solid ${rank < 4 ? scoreCol : C.border}`, borderRadius: 8, padding: 16, position: "relative", boxShadow: rank < 4 ? `0 0 14px ${scoreCol}18` : "none" }}>
       {/* 순위 배지 */}
-      <div style={{ position: "absolute", top: -10, left: 14, fontSize: rank < 3 ? 18 : 12, lineHeight: 1 }}>
-        {rank < 3
+      <div style={{ position: "absolute", top: -10, left: 14, fontSize: rank < 4 ? 18 : 12, lineHeight: 1 }}>
+        {rank < 4
           ? medals[rank]
           : <span style={{ background: C.panelAlt, border: `1px solid ${C.border}`, borderRadius: 20, padding: "1px 7px", fontSize: 10, color: C.muted, fontFamily: FONTS.mono }}>#{rank + 1}</span>}
       </div>
@@ -1096,8 +1096,8 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
     .filter(s => filterLabel === "전체" || s.env?.label === filterLabel)
     .filter(passVolFilter)
     .sort((a, b) => (a.env?.proximity ?? 999) - (b.env?.proximity ?? 999));
-  const topPicks = filtered.slice(0, 3);
-  const restPicks = filtered.slice(3);
+  const topPicks = filtered.slice(0, 4);
+  const restPicks = filtered.slice(4);
 
   // 요약 카드 — 거래량 필터 통과한 종목 기준
   const passed = computed.filter(passVolFilter);
@@ -1273,7 +1273,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
           {topPicks.map((s, i) => <PickCard key={s.ticker} s={s} rank={i} C={C} />)}
           {/* 아직 안 도착한 TOP3 자리를 스켈레톤으로 채움 */}
-          {loading && Array.from({ length: Math.max(0, 3 - topPicks.length) }).map((_, i) => (
+          {loading && Array.from({ length: Math.max(0, 4 - topPicks.length) }).map((_, i) => (
             <SkeletonCard key={`sk-${i}`} C={C} />
           ))}
         </div>
@@ -1999,6 +1999,13 @@ export default function StockDashboard() {
           </div>
         )}
       </main>
+
+      {/* ── 푸터 ── */}
+      <footer style={{ borderTop: `1px solid ${C.border}`, padding: "14px 20px", textAlign: "center" }}>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>
+          © 2026 <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span> Dashboard. Created by <span style={{ color: C.accent }}>조영욱</span>.
+        </span>
+      </footer>
     </div>
   );
 }
