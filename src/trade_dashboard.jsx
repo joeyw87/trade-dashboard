@@ -282,25 +282,47 @@ async function fetchYahooQuote(ticker) {
   const chart = JSON.parse((await (await fetch(proxy)).json()).contents).chart.result[0];
   const closes = chart.indicators.quote[0].close.filter(Boolean);
   const volumes = chart.indicators.quote[0].volume.filter(Boolean);
+  const prices = chart.indicators.quote[0].close.filter(Boolean); // closes와 동일
   const meta = chart.meta;
+
   const price = meta.regularMarketPrice;
   const prevClose = meta.previousClose || meta.chartPreviousClose;
   const changeRate = ((price - prevClose) / prevClose) * 100;
+
+  // 거래량 통계 — 최근 n일 평균
+  const avg = (arr, n) => arr.slice(-n).reduce((a, b) => a + b, 0) / Math.min(n, arr.length);
   const lastVol = volumes[volumes.length - 1];
-  const volRate = Math.round((lastVol / (volumes.slice(-20).reduce((a, b) => a + b, 0) / 20)) * 100);
+  const vol3dAvg = Math.round(avg(volumes, 3));
+  const vol5dAvg = Math.round(avg(volumes, 5));
+  const vol20dAvg = Math.round(avg(volumes, 20));
+  const volRate = Math.round((lastVol / (vol20dAvg || 1)) * 100);
+
+  // 거래대금 통계 (원) — 최근 n일 종가 × 거래량 평균
+  const tradingValues = closes.map((c, i) => (c || 0) * (volumes[i] || 0)).filter(Boolean);
+  const tv3dAvg = Math.round(avg(tradingValues, 3));
+  const tv5dAvg = Math.round(avg(tradingValues, 5));
+  const tv20dAvg = Math.round(avg(tradingValues, 20));
+
   const rsi = calcRSI(closes);
   const bb = calcBB(closes);
-  const env = calcEnvelope(closes);          // 엔벨로프 추가
+  const env = calcEnvelope(closes);
   const score = calcScore(rsi, volRate, bb.pos);
+
   return {
     price, prevClose, changeRate,
-    volume: lastVol, volRate,
+    // 거래량
+    volume: lastVol,
+    vol3dAvg, vol5dAvg, vol20dAvg,
+    volRate,
+    // 거래대금
     tradingValue: Math.round(price * lastVol),
+    tv3dAvg, tv5dAvg, tv20dAvg,
+    // 지표
     rsi, bb: bb.label, bbPos: bb.pos,
-    env,                                      // 엔벨로프 데이터
+    env,
     score, signal: getSignal(score),
     reason: buildReason(rsi, volRate, bb.label),
-    closes,                                   // 차트용 원시 데이터
+    closes,
   };
 }
 
@@ -750,11 +772,12 @@ function PickCard({ s, rank, C }) {
       {/* 엔벨로프 바 */}
       <div style={{ marginBottom: 12 }}><EnvelopeBar env={s.env} C={C} /></div>
       {/* 보조 지표 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
         {[
           ["RSI", s.rsi, s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted],
           ["하한까지", s.env ? `${Math.abs(s.env.distPct).toFixed(1)}%` : "—", scoreCol],
-          ["MA", s.env ? fmt(Math.round(s.env.ma)) : "—", C.accent],
+          ["5일거래량", s.vol5dAvg ? `${Math.round(s.vol5dAvg / 10000)}만주` : "—", C.muted],
+          ["5일거래대금", s.tv5dAvg ? fmtValue(s.tv5dAvg) : "—", C.accent],
         ].map(([label, val, color]) => (
           <div key={label} style={{ background: C.panelAlt, borderRadius: 4, padding: "5px 8px", textAlign: "center" }}>
             <div style={{ fontSize: 9, color: C.muted, marginBottom: 2 }}>{label}</div>
@@ -811,12 +834,18 @@ function YwPickTab({ C }) {
   const S = makeS(C);
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadedCount, setLoadedCount] = useState(0);   // 완료된 종목 수
+  const [loadedCount, setLoadedCount] = useState(0);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [envPeriod, setEnvPeriod] = useState(20);
   const [envKPct, setEnvKPct] = useState(4);
   const [filterLabel, setFilterLabel] = useState("전체");
+
+  // ── 거래량·거래대금 필터 ────────────────────────────────
+  const [volPeriod, setVolPeriod] = useState(5);       // 3일 or 5일
+  const [minVolUnit, setMinVolUnit] = useState("만주");  // "만주" | "억원"
+  const [minVolVal, setMinVolVal] = useState(50);      // 최소 거래량 (만주) or 거래대금 (억원)
+  const [volFilterOn, setVolFilterOn] = useState(true);    // 거래량 필터 ON/OFF
 
   const loadData = async () => {
     setLoading(true);
@@ -824,11 +853,9 @@ function YwPickTab({ C }) {
     setStocks([]);
     setLoadedCount(0);
 
-    const total = YW_PICK_TICKERS.length;
     const results = [];
     let anyOk = false;
 
-    // 각 종목을 독립 Promise로 — 완료되는 즉시 state 반영
     await Promise.allSettled(
       YW_PICK_TICKERS.map(t =>
         fetchYahooQuote(t.ticker)
@@ -836,11 +863,11 @@ function YwPickTab({ C }) {
             const item = { ...d, ...t };
             results.push(item);
             anyOk = true;
-            setStocks(prev => [...prev, item]);          // 도착한 순서대로 바로 추가
+            setStocks(prev => [...prev, item]);
             setLoadedCount(prev => prev + 1);
           })
           .catch(() => {
-            setLoadedCount(prev => prev + 1);            // 실패해도 카운트는 올림
+            setLoadedCount(prev => prev + 1);
           })
       )
     );
@@ -855,24 +882,42 @@ function YwPickTab({ C }) {
 
   useEffect(() => { loadData(); }, []);
 
-  // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산 (API 재호출 없이)
+  // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산
   const computed = stocks.map(s => ({
     ...s,
     env: s.closes?.length ? calcEnvelope(s.closes, envPeriod, envKPct) : s.env,
+    // 선택된 기간의 평균 거래량·거래대금
+    avgVol: volPeriod === 3 ? s.vol3dAvg : s.vol5dAvg,
+    avgTv: volPeriod === 3 ? s.tv3dAvg : s.tv5dAvg,
   }));
+
+  // ── 거래량/거래대금 필터 적용 ──────────────────────────
+  const passVolFilter = s => {
+    if (!volFilterOn) return true;
+    if (minVolUnit === "만주") {
+      const avgVol = (s.avgVol ?? 0) / 10000; // 주 → 만주
+      return avgVol >= minVolVal;
+    } else {
+      const avgTv = (s.avgTv ?? 0) / 1e8;    // 원 → 억원
+      return avgTv >= minVolVal;
+    }
+  };
 
   const FILTER_LABELS = ["전체", "하한 이탈", "하한 근접", "하한 접근"];
   const filtered = computed
     .filter(s => filterLabel === "전체" || s.env?.label === filterLabel)
+    .filter(passVolFilter)
     .sort((a, b) => (a.env?.proximity ?? 999) - (b.env?.proximity ?? 999));
   const topPicks = filtered.slice(0, 3);
   const restPicks = filtered.slice(3);
 
+  // 요약 카드 — 거래량 필터 통과한 종목 기준
+  const passed = computed.filter(passVolFilter);
   const statItems = [
-    { label: "스캔 종목", value: loading ? "…" : `${computed.length}개`, color: C.accent },
-    { label: "하한 이탈", value: loading ? "…" : `${computed.filter(s => s.env?.label === "하한 이탈").length}개`, color: C.red },
-    { label: "하한 근접", value: loading ? "…" : `${computed.filter(s => s.env?.label === "하한 근접").length}개`, color: C.yellow },
-    { label: "하한 접근", value: loading ? "…" : `${computed.filter(s => s.env?.label === "하한 접근").length}개`, color: C.green },
+    { label: "스캔 종목", value: `${computed.length}개`, color: C.accent },
+    { label: "필터 통과", value: `${passed.length}개`, color: C.yellow },
+    { label: "하한 이탈", value: `${passed.filter(s => s.env?.label === "하한 이탈").length}개`, color: C.red },
+    { label: "하한 근접/접근", value: `${passed.filter(s => ["하한 근접", "하한 접근"].includes(s.env?.label)).length}개`, color: C.green },
   ];
 
   return (
@@ -922,7 +967,91 @@ function YwPickTab({ C }) {
 
       {/* 설정 + 필터 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 12, alignItems: "start" }}>
-        <EnvelopeSettings period={envPeriod} kPct={envKPct} setPeriod={setEnvPeriod} setKPct={setEnvKPct} C={C} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <EnvelopeSettings period={envPeriod} kPct={envKPct} setPeriod={setEnvPeriod} setKPct={setEnvKPct} C={C} />
+
+          {/* ── 거래량·거래대금 필터 패널 ── */}
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
+            {/* 헤더 + ON/OFF 토글 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1 }}>거래량·거래대금 필터</span>
+              <div onClick={() => setVolFilterOn(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <span style={{ fontSize: 11, color: volFilterOn ? C.green : C.muted }}>{volFilterOn ? "ON" : "OFF"}</span>
+                <div style={{ width: 36, height: 18, borderRadius: 9, background: volFilterOn ? C.green : C.border, position: "relative", transition: "background 0.25s" }}>
+                  <div style={{ position: "absolute", top: 2, left: volFilterOn ? 18 : 2, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.25s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ opacity: volFilterOn ? 1 : 0.4, pointerEvents: volFilterOn ? "auto" : "none", display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* 기준 기간 선택 */}
+              <div>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>기준 기간</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[["3", "최근 3일 평균"], ["5", "최근 5일 평균"]].map(([v, label]) => (
+                    <button key={v} onClick={() => setVolPeriod(+v)} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${volPeriod === +v ? C.accent : C.border}`, background: volPeriod === +v ? `${C.accent}18` : "transparent", color: volPeriod === +v ? C.accent : C.muted, fontWeight: volPeriod === +v ? 600 : 400 }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 기준 단위 선택 */}
+              <div>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>필터 기준</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["만주", "억원"].map(unit => (
+                    <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 30); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: 12, cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
+                      거래{unit === "만주" ? "량" : "대금"} ({unit})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 최솟값 슬라이더 */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: C.muted }}>
+                    {minVolUnit === "만주" ? "최소 평균 거래량" : "최소 평균 거래대금"}
+                  </span>
+                  <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 13, color: C.accent }}>
+                    {minVolVal.toLocaleString()}{minVolUnit}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={minVolUnit === "만주" ? 1 : 1}
+                  max={minVolUnit === "만주" ? 500 : 500}
+                  step={minVolUnit === "만주" ? 5 : 5}
+                  value={minVolVal}
+                  onChange={e => setMinVolVal(+e.target.value)}
+                  style={{ width: "100%" }}
+                />
+                {/* 빠른 선택 프리셋 */}
+                <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
+                  {(minVolUnit === "만주"
+                    ? [[10, "10만주"], [50, "50만주"], [100, "100만주"], [200, "200만주"]]
+                    : [[10, "10억"], [30, "30억"], [100, "100억"], [300, "300억"]]
+                  ).map(([v, label]) => (
+                    <button key={v} onClick={() => setMinVolVal(v)} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", border: `1px solid ${minVolVal === v ? C.accent : C.border}`, background: minVolVal === v ? `${C.accent}15` : "transparent", color: minVolVal === v ? C.accent : C.muted }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 필터 적용 현황 */}
+              <div style={{ background: C.panelAlt, borderRadius: 4, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: C.muted }}>
+                  {volPeriod}일 평균 {minVolUnit === "만주" ? "거래량" : "거래대금"} ≥ {minVolVal.toLocaleString()}{minVolUnit}
+                </span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 12, fontWeight: 700, color: C.green }}>
+                  {computed.filter(passVolFilter).length} / {computed.length} 통과
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
           <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 10 }}>필터</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -968,8 +1097,8 @@ function YwPickTab({ C }) {
               <div className="spin" style={{ marginLeft: "auto", width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow }} />
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
-            {["종목", "현재가", "등락률", "RSI", "엔벨로프 위치", "상태"].map(h => (
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
+            {["종목", "현재가", "등락률", "RSI", `${volPeriod}일 거래량`, "엔벨로프 위치", "상태"].map(h => (
               <span key={h} style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{h}</span>
             ))}
           </div>
@@ -978,8 +1107,11 @@ function YwPickTab({ C }) {
             const lbl = pickLabel(s.env);
             const ps = calcPickScore(s.env, s.rsi);
             const scoreCol = ps >= 90 ? C.red : ps >= 75 ? C.yellow : C.green;
+            const avgVol = volPeriod === 3 ? s.vol3dAvg : s.vol5dAvg;
+            const avgTv = volPeriod === 3 ? s.tv3dAvg : s.tv5dAvg;
+            const volOk = !volFilterOn || passVolFilter(s);
             return (
-              <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
+              <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
                 <div>
                   <div style={{ fontWeight: 600, color: C.text }}>{s.name}</div>
                   <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</div>
@@ -989,6 +1121,15 @@ function YwPickTab({ C }) {
                   {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
                 </div>
                 <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted }}>{s.rsi}</div>
+                {/* 거래량 / 거래대금 */}
+                <div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: volOk ? C.text : C.red }}>
+                    {avgVol ? `${Math.round(avgVol / 10000)}만주` : "—"}
+                  </div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted }}>
+                    {avgTv ? fmtValue(avgTv) : "—"}
+                  </div>
+                </div>
                 <div style={{ paddingRight: 8 }}>
                   <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right,${C.green}30,${C.muted}15,${C.red}15)` }}>
                     <div style={{ position: "absolute", left: `${Math.max(1, Math.min(99, s.env?.proximity ?? 50))}%`, top: -3, width: 10, height: 10, transform: "translateX(-50%)", borderRadius: "50%", background: scoreCol, border: `2px solid ${C.panel}` }} />
