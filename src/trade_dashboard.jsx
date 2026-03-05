@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 
 // ════════════════════════════════════════════════════════
+//  버전 정보 — 여기서 관리
+// ════════════════════════════════════════════════════════
+const APP_VERSION  = "1.4.0";
+const APP_DATE     = "2025-03-06";
+const APP_NOTES    = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
+
+// ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
 // ════════════════════════════════════════════════════════
 
@@ -639,6 +646,133 @@ function generateCandles() {
   });
 }
 const CANDLE_DATA = generateCandles();
+
+// ════════════════════════════════════════════════════════
+//  9-1. 시장 지수·환율 패널
+// ════════════════════════════════════════════════════════
+
+// Yahoo Finance 티커로 지수·환율 fetch
+const MARKET_ITEMS = [
+  { id: "kospi",  label: "KOSPI",   ticker: "^KS11",   type: "index",    flag: "🇰🇷" },
+  { id: "kosdaq", label: "KOSDAQ",  ticker: "^KQ11",   type: "index",    flag: "🇰🇷" },
+  { id: "sp500",  label: "S&P 500", ticker: "^GSPC",   type: "index",    flag: "🇺🇸" },
+  { id: "usdkrw", label: "USD/KRW", ticker: "KRW=X",   type: "fx",       flag: "💱" },
+  { id: "usdjpy", label: "USD/JPY", ticker: "JPY=X",   type: "fx",       flag: "🇯🇵" },
+  { id: "nasdaq", label: "NASDAQ",  ticker: "^IXIC",   type: "index",    flag: "🇺🇸" },
+];
+
+async function fetchMarketItem(item) {
+  const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5d`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const chart = JSON.parse((await (await fetch(proxy)).json()).contents).chart.result[0];
+  const meta  = chart.meta;
+  const price      = meta.regularMarketPrice;
+  const prevClose  = meta.previousClose || meta.chartPreviousClose;
+  const changeRate = ((price - prevClose) / prevClose) * 100;
+  const closes     = chart.indicators.quote[0].close.filter(Boolean);
+  return { ...item, price, prevClose, changeRate, closes };
+}
+
+function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
+  return (
+    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 2 }}>MARKET OVERVIEW</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {lastUpdated && !loading && (
+            <span style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>
+          )}
+          {loading ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div className="spin" style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px solid ${C.border}`, borderTopColor: C.accent }} />
+              <span style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted }}>로딩 중</span>
+            </div>
+          ) : (
+            <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 4, fontSize: 10, cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontFamily: FONTS.mono }}>
+              🔄 새로고침
+            </button>
+          )}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+        {items.map(item => {
+          const up   = (item.changeRate ?? 0) >= 0;
+          const col  = item.price === null ? C.muted : up ? C.green : C.red;
+          const isFx = item.type === "fx";
+          return (
+            <div key={item.id} style={{ background: C.panelAlt, borderRadius: 6, padding: "10px 12px", borderLeft: `3px solid ${item.price === null ? C.border : col}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                <span style={{ fontSize: 12 }}>{item.flag}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, fontWeight: 600 }}>{item.label}</span>
+              </div>
+              {item.price === null ? (
+                <div className="shimmer" style={{ height: 18, width: "70%", borderRadius: 4, marginBottom: 4 }} />
+              ) : (
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 3 }}>
+                  {isFx ? item.price.toFixed(2) : item.price >= 1000 ? fmt(Math.round(item.price)) : item.price.toFixed(2)}
+                </div>
+              )}
+              {item.changeRate === null ? (
+                <div className="shimmer" style={{ height: 11, width: "50%", borderRadius: 4 }} />
+              ) : (
+                <div style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: col }}>
+                  {up ? "▲" : "▼"} {Math.abs(item.changeRate).toFixed(2)}%
+                </div>
+              )}
+              {item.closes.length > 1 && (
+                <div style={{ marginTop: 6 }}>
+                  <MiniChart data={item.closes} color={col} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MarketDetailPanel({ C }) {
+  // KOSPI / KOSDAQ / S&P500 / 환율 상세 — 업종별 색 구분
+  const sectors = [
+    { label: "반도체",   change:  1.24, color: "#00d4ff" },
+    { label: "2차전지",  change: -0.83, color: "#f0b429" },
+    { label: "바이오",   change:  0.55, color: "#26c96f" },
+    { label: "자동차",   change:  1.87, color: "#a78bfa" },
+    { label: "금융",     change: -0.21, color: "#fb923c" },
+    { label: "에너지",   change: -1.12, color: "#ef4444" },
+    { label: "IT서비스", change:  0.34, color: "#22d3ee" },
+    { label: "철강·소재",change: -0.67, color: "#94a3b8" },
+  ];
+
+  return (
+    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}>
+      <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 2, marginBottom: 12 }}>KOSPI 업종별 등락</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+        {sectors.map(sec => {
+          const up  = sec.change >= 0;
+          const col = up ? C.green : C.red;
+          const barW = Math.min(100, Math.abs(sec.change) / 2 * 100);
+          return (
+            <div key={sec.label} style={{ background: C.panelAlt, borderRadius: 5, padding: "8px 10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                <span style={{ fontSize: 11, color: C.text, fontWeight: 500 }}>{sec.label}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 700, color: col }}>
+                  {up ? "+" : ""}{sec.change.toFixed(2)}%
+                </span>
+              </div>
+              {/* 게이지 바 */}
+              <div style={{ height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${barW}%`, background: col, borderRadius: 2, transition: "width 0.6s ease" }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 function CandleChart({ candles, C }) {
   const W = 620, H = 200, PAD = { l: 10, r: 50, t: 10, b: 20 };
@@ -1554,6 +1688,27 @@ export default function StockDashboard() {
     setYwFetched(true);
   };
 
+  // ── 시장 지수·환율 데이터 (탭 이동해도 유지) ─────────────
+  const [marketItems,       setMarketItems]       = useState(MARKET_ITEMS.map(m => ({ ...m, price: null, changeRate: null, closes: [] })));
+  const [marketLoading,     setMarketLoading]     = useState(false);
+  const [marketLastUpdated, setMarketLastUpdated] = useState(null);
+  const [marketFetched,     setMarketFetched]     = useState(false); // 최초 1회 플래그
+
+  const loadMarketData = async () => {
+    setMarketLoading(true);
+    setMarketItems(MARKET_ITEMS.map(m => ({ ...m, price: null, changeRate: null, closes: [] }))); // 리셋
+    for (const item of MARKET_ITEMS) {
+      try {
+        const d = await fetchMarketItem(item);
+        setMarketItems(prev => prev.map(p => p.id === item.id ? d : p));
+      } catch (e) { console.warn(`${item.ticker} 실패:`, e); }
+      await delay(200);
+    }
+    setMarketLastUpdated(new Date());
+    setMarketLoading(false);
+    setMarketFetched(true);
+  };
+
   useEffect(() => {
     const t = setInterval(() => {
       setTime(new Date());
@@ -1561,6 +1716,9 @@ export default function StockDashboard() {
     }, 1500);
     return () => clearInterval(t);
   }, []);
+
+  // 앱 최초 로드 시 대시보드 market 데이터 1회 자동 로드
+  useEffect(() => { loadMarketData(); }, []);
 
   const totalEval = holdings.reduce((s, h) => s + h.qty * h.currentPrice, 0);
   const totalProfit = holdings.reduce((s, h) => s + h.qty * (h.currentPrice - h.avgPrice), 0);
@@ -1576,13 +1734,15 @@ export default function StockDashboard() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ fontFamily: FONTS.mono, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2 }}>
             ◈ <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span>
+            <span style={{ fontSize: 9, fontWeight: 400, color: C.muted, marginLeft: 6, letterSpacing: 0.5 }}>v{APP_VERSION}</span>
           </div>
           <div style={{ width: 1, height: 20, background: C.border }} />
           {TABS.map(t => (
             <button key={t.id} onClick={() => {
               setTab(t.id);
-              if (t.id === "closing" && !closingFetched && !closingLoading) loadClosingData();
-              if (t.id === "yw-pick" && !ywFetched && !ywLoading) loadYwData();
+              if (t.id === "dashboard" && !marketFetched && !marketLoading) loadMarketData();
+              if (t.id === "closing"   && !closingFetched && !closingLoading) loadClosingData();
+              if (t.id === "yw-pick"   && !ywFetched && !ywLoading) loadYwData();
             }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : C.muted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent" }}>
               {t.label}
             </button>
@@ -1609,101 +1769,69 @@ export default function StockDashboard() {
 
         {/* ━━━ 대시보드 ━━━ */}
         {tab === "dashboard" && (
-          <div style={S.grid("320px 1fr")}>
-            {/* 관심종목 */}
-            <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
-              <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={S.monoLabel}>WATCHLIST</span>
-                <span style={{ fontSize: 10, color: C.muted }}>실시간</span>
-              </div>
-              {MOCK_STOCKS.map((s, i) => (
-                <div key={s.code} onClick={() => setSelectedStock(s)} style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, cursor: "pointer", transition: "background 0.2s", background: selectedStock.code === s.code ? C.selected : "transparent", display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text }}>{s.name}</div>
-                    <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 10, color: C.muted }}>{s.code}</div>
-                  </div>
-                  <MiniChart data={prices[i]} color={s.change >= 0 ? C.green : C.red} />
-                  <div style={{ textAlign: "right", minWidth: 80 }}>
-                    <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 13, color: C.text }}>{fmt(s.price)}</div>
-                    <ChangeText value={s.changeRate} C={C} />
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }} className="slide-in">
 
-            {/* 차트 + 주문 */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={{ ...S.panel, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>
-                    {selectedStock.name} <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: C.muted }}>{selectedStock.code}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
-                    <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 24, color: selectedStock.change >= 0 ? C.green : C.red }}>{fmt(selectedStock.price)}</span>
-                    <ChangeText value={selectedStock.changeRate} C={C} />
-                  </div>
+            {/* ── 지수·환율 요약 바 ── */}
+            <MarketOverviewPanel C={C} items={marketItems} loading={marketLoading} lastUpdated={marketLastUpdated} onReload={loadMarketData} />
+
+            <div style={S.grid("320px 1fr")}>
+              {/* 관심종목 */}
+              <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={S.monoLabel}>WATCHLIST</span>
+                  <span style={{ fontSize: 10, color: C.muted }}>실시간</span>
                 </div>
-                <div style={{ display: "flex", gap: 16 }}>
-                  {[["고가", selectedStock.high, C.green], ["저가", selectedStock.low, C.red], ["거래량", selectedStock.volume, C.yellow]].map(([label, val, col]) => (
-                    <div key={label} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 10, color: C.muted }}>{label}</div>
-                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: col }}>{typeof val === "number" && val > 100000 ? `${(val / 10000).toFixed(0)}만` : fmt(val)}</div>
+                {MOCK_STOCKS.map((s, i) => (
+                  <div key={s.code} onClick={() => setSelectedStock(s)} style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, cursor: "pointer", transition: "background 0.2s", background: selectedStock.code === s.code ? C.selected : "transparent", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 500, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text }}>{s.name}</div>
+                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 10, color: C.muted }}>{s.code}</div>
                     </div>
-                  ))}
-                </div>
+                    <MiniChart data={prices[i]} color={s.change >= 0 ? C.green : C.red} />
+                    <div style={{ textAlign: "right", minWidth: 80 }}>
+                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 13, color: C.text }}>{fmt(s.price)}</div>
+                      <ChangeText value={s.changeRate} C={C} />
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div style={{ ...S.panel, padding: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={S.monoLabel}>CANDLE · 1MIN</span>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {["1분", "5분", "1시간", "1일"].map(p => (
-                      <button key={p} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 3, color: C.muted, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: FONTS.mono }}>{p}</button>
+              {/* 차트 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ ...S.panel, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>
+                      {selectedStock.name} <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: C.muted }}>{selectedStock.code}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
+                      <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 24, color: selectedStock.change >= 0 ? C.green : C.red }}>{fmt(selectedStock.price)}</span>
+                      <ChangeText value={selectedStock.changeRate} C={C} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    {[["고가", selectedStock.high, C.green], ["저가", selectedStock.low, C.red], ["거래량", selectedStock.volume, C.yellow]].map(([label, val, col]) => (
+                      <div key={label} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: C.muted }}>{label}</div>
+                        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: col }}>{typeof val === "number" && val > 100000 ? `${(val / 10000).toFixed(0)}만` : fmt(val)}</div>
+                      </div>
                     ))}
                   </div>
                 </div>
-                <CandleChart candles={CANDLE_DATA} C={C} />
-              </div>
 
-              <div style={{ ...S.panel, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div>
-                  <PanelHeader label="주문 유형" C={C} />
-                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                    {[["limit", "지정가"], ["market", "시장가"]].map(([val, label]) => (
-                      <button key={val} onClick={() => setOrderType(val)} style={{ flex: 1, padding: 6, cursor: "pointer", borderRadius: 4, fontSize: 12, border: `1px solid ${orderType === val ? C.accent : C.border}`, background: orderType === val ? `${C.accent}20` : "transparent", color: orderType === val ? C.accent : C.muted }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
-                    <InputField label="수량" type="number" value={orderQty} onChange={e => setOrderQty(+e.target.value)} C={C} />
-                    <InputField label="가격" type="number" value={orderPrice} onChange={e => setOrderPrice(+e.target.value)} C={C} />
-                  </div>
-                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
-                    총 주문금액: <span style={{ color: C.yellow, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(orderQty * orderPrice)}원</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {[["buy", "매수", C.green], ["sell", "매도", C.red]].map(([side, label, col]) => (
-                      <button key={side} onClick={() => placeOrder(side)} style={{ flex: 1, padding: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, borderRadius: 4, background: `${col}20`, border: `1px solid ${col}`, color: col }}>{label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <PanelHeader label="호가창" C={C} />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`ask-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.red}10`, marginBottom: 1, borderRadius: 2, fontSize: 11 }}>
-                      <span style={{ color: C.red, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price + (5 - i) * 100)}</span>
-                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
+                <div style={{ ...S.panel, padding: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={S.monoLabel}>CANDLE · 1MIN</span>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {["1분", "5분", "1시간", "1일"].map(p => (
+                        <button key={p} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 3, color: C.muted, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: FONTS.mono }}>{p}</button>
+                      ))}
                     </div>
-                  ))}
-                  <div style={{ height: 1, background: C.accent, margin: "4px 0", opacity: 0.4 }} />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`bid-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.green}10`, marginBottom: 1, borderRadius: 2, fontSize: 11 }}>
-                      <span style={{ color: C.green, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price - i * 100)}</span>
-                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
-                    </div>
-                  ))}
+                  </div>
+                  <CandleChart candles={CANDLE_DATA} C={C} />
                 </div>
+
+                {/* ── 시장 상세 지수 카드 ── */}
+                <MarketDetailPanel C={C} />
               </div>
             </div>
           </div>
@@ -1754,6 +1882,48 @@ export default function StockDashboard() {
                     <div key={label} style={{ textAlign: "center", padding: 12, background: C.panelAlt, borderRadius: 4, border: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{label}</div>
                       <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 16, color: col }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 주문 유형 + 호가창 */}
+              <div style={{ ...S.panel, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <PanelHeader label="주문 유형" C={C} />
+                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                    {[["limit", "지정가"], ["market", "시장가"]].map(([val, label]) => (
+                      <button key={val} onClick={() => setOrderType(val)} style={{ flex: 1, padding: 6, cursor: "pointer", borderRadius: 4, fontSize: 12, border: `1px solid ${orderType === val ? C.accent : C.border}`, background: orderType === val ? `${C.accent}20` : "transparent", color: orderType === val ? C.accent : C.muted }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                    <InputField label="수량" type="number" value={orderQty} onChange={e => setOrderQty(+e.target.value)} C={C} />
+                    <InputField label="가격" type="number" value={orderPrice} onChange={e => setOrderPrice(+e.target.value)} C={C} />
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
+                    총 주문금액: <span style={{ color: C.yellow, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(orderQty * orderPrice)}원</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[["buy", "매수", C.green], ["sell", "매도", C.red]].map(([side, label, col]) => (
+                      <button key={side} onClick={() => placeOrder(side)} style={{ flex: 1, padding: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, borderRadius: 4, background: `${col}20`, border: `1px solid ${col}`, color: col }}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <PanelHeader label="호가창" C={C} />
+                  {[...Array(5)].map((_, i) => (
+                    <div key={`ask-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.red}10`, marginBottom: 1, borderRadius: 2, fontSize: 11 }}>
+                      <span style={{ color: C.red, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price + (5 - i) * 100)}</span>
+                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
+                    </div>
+                  ))}
+                  <div style={{ height: 1, background: C.accent, margin: "4px 0", opacity: 0.4 }} />
+                  {[...Array(5)].map((_, i) => (
+                    <div key={`bid-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.green}10`, marginBottom: 1, borderRadius: 2, fontSize: 11 }}>
+                      <span style={{ color: C.green, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price - i * 100)}</span>
+                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
