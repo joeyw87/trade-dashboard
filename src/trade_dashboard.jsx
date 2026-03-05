@@ -89,20 +89,72 @@ const WATCH_TICKERS = [
   { ticker: "207940.KS", name: "삼성바이오로직스" },
 ];
 
-// YW's Pick 전용 스캔 종목 (더 넓은 유니버스)
+// YW's Pick 전용 스캔 종목 — 코스피 대형주 50종목
 const YW_PICK_TICKERS = [
-  ...WATCH_TICKERS,
-  { ticker: "035720.KS", name: "카카오" },
-  { ticker: "000270.KS", name: "기아" },
-  { ticker: "005380.KS", name: "현대차" },
-  { ticker: "066570.KS", name: "LG전자" },
-  { ticker: "055550.KS", name: "신한지주" },
-  { ticker: "105560.KS", name: "KB금융" },
-  { ticker: "028260.KS", name: "삼성물산" },
-  { ticker: "096770.KS", name: "SK이노베이션" },
-  { ticker: "011170.KS", name: "롯데케미칼" },
+  // ── 반도체·IT ──────────────────────────────────────
+  { ticker: "005930.KS", name: "삼성전자" },
+  { ticker: "000660.KS", name: "SK하이닉스" },
   { ticker: "009150.KS", name: "삼성전기" },
-].filter((v, i, a) => a.findIndex(t => t.ticker === v.ticker) === i); // 중복 제거
+  { ticker: "066570.KS", name: "LG전자" },
+  { ticker: "034730.KS", name: "SK스퀘어" },
+  // ── 인터넷·플랫폼 ───────────────────────────────────
+  { ticker: "035420.KS", name: "NAVER" },
+  { ticker: "035720.KS", name: "카카오" },
+  { ticker: "259960.KS", name: "크래프톤" },
+  { ticker: "036570.KS", name: "엔씨소프트" },
+  // ── 자동차·부품 ─────────────────────────────────────
+  { ticker: "005380.KS", name: "현대차" },
+  { ticker: "000270.KS", name: "기아" },
+  { ticker: "012330.KS", name: "현대모비스" },
+  { ticker: "011210.KS", name: "현대위아" },
+  { ticker: "018880.KS", name: "한온시스템" },
+  // ── 2차전지·에너지 ──────────────────────────────────
+  { ticker: "373220.KS", name: "LG에너지솔루션" },
+  { ticker: "006400.KS", name: "삼성SDI" },
+  { ticker: "051910.KS", name: "LG화학" },
+  { ticker: "247540.KS", name: "에코프로비엠" },
+  { ticker: "096770.KS", name: "SK이노베이션" },
+  { ticker: "010950.KS", name: "S-Oil" },
+  // ── 바이오·헬스케어 ─────────────────────────────────
+  { ticker: "207940.KS", name: "삼성바이오로직스" },
+  { ticker: "068270.KS", name: "셀트리온" },
+  { ticker: "128940.KS", name: "한미약품" },
+  { ticker: "000100.KS", name: "유한양행" },
+  { ticker: "326030.KS", name: "SK바이오팜" },
+  // ── 금융·보험 ──────────────────────────────────────
+  { ticker: "105560.KS", name: "KB금융" },
+  { ticker: "055550.KS", name: "신한지주" },
+  { ticker: "086790.KS", name: "하나금융지주" },
+  { ticker: "316140.KS", name: "우리금융지주" },
+  { ticker: "032830.KS", name: "삼성생명" },
+  { ticker: "000810.KS", name: "삼성화재" },
+  // ── 철강·소재 ──────────────────────────────────────
+  { ticker: "005490.KS", name: "POSCO홀딩스" },
+  { ticker: "004020.KS", name: "현대제철" },
+  { ticker: "011170.KS", name: "롯데케미칼" },
+  { ticker: "006260.KS", name: "LS" },
+  // ── 건설·중공업 ─────────────────────────────────────
+  { ticker: "000720.KS", name: "현대건설" },
+  { ticker: "034020.KS", name: "두산에너빌리티" },
+  { ticker: "047810.KS", name: "한국항공우주" },
+  { ticker: "012450.KS", name: "한화에어로스페이스" },
+  // ── 유통·소비재 ─────────────────────────────────────
+  { ticker: "028260.KS", name: "삼성물산" },
+  { ticker: "004170.KS", name: "신세계" },
+  { ticker: "023530.KS", name: "롯데쇼핑" },
+  { ticker: "139480.KS", name: "이마트" },
+  // ── 통신 ───────────────────────────────────────────
+  { ticker: "017670.KS", name: "SK텔레콤" },
+  { ticker: "030200.KS", name: "KT" },
+  { ticker: "032640.KS", name: "LG유플러스" },
+  // ── 운송·물류 ──────────────────────────────────────
+  { ticker: "003490.KS", name: "대한항공" },
+  { ticker: "086280.KS", name: "현대글로비스" },
+  { ticker: "011200.KS", name: "HMM" },
+  // ── 기타 우량주 ─────────────────────────────────────
+  { ticker: "000830.KS", name: "삼성물산우" },
+  { ticker: "033780.KS", name: "KT&G" },
+];
 
 // ════════════════════════════════════════════════════════
 //  2. Mock 데이터
@@ -739,7 +791,7 @@ function EnvelopeSettings({ period, kPct, setPeriod, setKPct, C }) {
         <div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 5 }}>밴드폭 (%)</div>
           <div style={{ display: "flex", gap: 6 }}>
-            {[3, 5, 8, 10].map(v => (
+            {[3, 4, 5, 8, 10].map(v => (
               <button key={v} onClick={() => setKPct(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${kPct === v ? C.yellow : C.border}`, background: kPct === v ? `${C.yellow}18` : "transparent", color: kPct === v ? C.yellow : C.muted }}>
                 ±{v}%
               </button>
@@ -759,25 +811,48 @@ function YwPickTab({ C }) {
   const S = makeS(C);
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadedCount, setLoadedCount] = useState(0);   // 완료된 종목 수
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [envPeriod, setEnvPeriod] = useState(20);
-  const [envKPct, setEnvKPct] = useState(5);
+  const [envKPct, setEnvKPct] = useState(4);
   const [filterLabel, setFilterLabel] = useState("전체");
 
   const loadData = async () => {
-    setLoading(true); setError(null);
-    try {
-      const results = await Promise.allSettled(
-        YW_PICK_TICKERS.map(t => fetchYahooQuote(t.ticker).then(d => ({ ...d, ...t })))
-      );
-      const ok = results.filter(r => r.status === "fulfilled").map(r => r.value);
-      if (!ok.length) throw new Error("데이터를 불러올 수 없습니다");
-      setStocks(ok); setLastUpdated(new Date());
-    } catch (e) {
-      setError(e.message); setStocks(MOCK_YW_PICKS);
-    } finally { setLoading(false); }
+    setLoading(true);
+    setError(null);
+    setStocks([]);
+    setLoadedCount(0);
+
+    const total = YW_PICK_TICKERS.length;
+    const results = [];
+    let anyOk = false;
+
+    // 각 종목을 독립 Promise로 — 완료되는 즉시 state 반영
+    await Promise.allSettled(
+      YW_PICK_TICKERS.map(t =>
+        fetchYahooQuote(t.ticker)
+          .then(d => {
+            const item = { ...d, ...t };
+            results.push(item);
+            anyOk = true;
+            setStocks(prev => [...prev, item]);          // 도착한 순서대로 바로 추가
+            setLoadedCount(prev => prev + 1);
+          })
+          .catch(() => {
+            setLoadedCount(prev => prev + 1);            // 실패해도 카운트는 올림
+          })
+      )
+    );
+
+    if (!anyOk) {
+      setError("모든 종목 데이터를 불러올 수 없습니다");
+      setStocks(MOCK_YW_PICKS);
+    }
+    setLastUpdated(new Date());
+    setLoading(false);
   };
+
   useEffect(() => { loadData(); }, []);
 
   // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산 (API 재호출 없이)
@@ -802,20 +877,42 @@ function YwPickTab({ C }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
-      {loading && stocks.length === 0 && <LoadingOverlay message={`${YW_PICK_TICKERS.length}개 종목 엔벨로프 스캔 중…`} C={C} />}
 
       {/* 헤더 배너 */}
-      <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ fontFamily: FONTS.mono, fontSize: 18, fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ YW's Pick</div>
-          <div style={{ fontSize: 12, color: C.muted }}>엔벨로프 하한선 기준 · 지지구간 근접 종목 자동 선별</div>
+      <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: loading ? 12 : 0 }}>
+          <div>
+            <div style={{ fontFamily: FONTS.mono, fontSize: 18, fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ YW's Pick</div>
+            <div style={{ fontSize: 12, color: C.muted }}>엔벨로프 하한선 기준 · 지지구간 근접 종목 자동 선별</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+            {loading
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.yellow }}>{loadedCount} / {YW_PICK_TICKERS.length} 완료</span>
+              : <button onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>
+                🔍 재스캔
+              </button>
+            }
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {lastUpdated && <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
-          <button onClick={loadData} disabled={loading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: 11, cursor: loading ? "not-allowed" : "pointer", border: `1px solid ${loading ? C.border : C.yellow}`, background: loading ? "transparent" : `${C.yellow}15`, color: loading ? C.muted : C.yellow, opacity: loading ? 0.6 : 1 }}>
-            {loading ? <><div className="spin" style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow, flexShrink: 0 }} />스캔 중…</> : "🔍 재스캔"}
-          </button>
-        </div>
+
+        {/* 진행률 바 — 로딩 중에만 표시 */}
+        {loading && (
+          <div>
+            <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 2,
+                width: `${(loadedCount / YW_PICK_TICKERS.length) * 100}%`,
+                background: `linear-gradient(to right, ${C.yellow}, ${C.accent})`,
+                transition: "width 0.35s ease",
+              }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 10, color: C.muted, fontFamily: FONTS.mono }}>
+              <span>종목 스캔 중…</span>
+              <span>{Math.round((loadedCount / YW_PICK_TICKERS.length) * 100)}%</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 요약 카드 */}
@@ -849,64 +946,69 @@ function YwPickTab({ C }) {
         </div>
       )}
 
-      {/* TOP 3 카드 */}
-      {loading
-        ? <div style={S.grid("repeat(3,1fr)")}>{[0, 1, 2].map(i => <SkeletonCard key={i} C={C} />)}</div>
-        : topPicks.length > 0 && (
-          <div>
-            <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.yellow, letterSpacing: 2, marginBottom: 10 }}>▶ TOP PICKS — 하한 최근접 종목</div>
-            <div className="fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
-              {topPicks.map((s, i) => <PickCard key={s.ticker} s={s} rank={i} C={C} />)}
-            </div>
-          </div>
-        )
-      }
+      {/* TOP 3 카드 — 도착한 순서대로 즉시 표시, 나머지 자리는 스켈레톤 */}
+      <div>
+        <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.yellow, letterSpacing: 2, marginBottom: 10 }}>▶ TOP PICKS — 하한 최근접 종목</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
+          {topPicks.map((s, i) => <PickCard key={s.ticker} s={s} rank={i} C={C} />)}
+          {/* 아직 안 도착한 TOP3 자리를 스켈레톤으로 채움 */}
+          {loading && Array.from({ length: Math.max(0, 3 - topPicks.length) }).map((_, i) => (
+            <SkeletonCard key={`sk-${i}`} C={C} />
+          ))}
+        </div>
+      </div>
 
-      {/* 나머지 테이블 */}
-      {!loading && restPicks.length > 0 && (
+      {/* 나머지 테이블 — 도착 즉시 표시, 아직 안 온 행은 스켈레톤 */}
+      {(restPicks.length > 0 || loading) && (
         <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, overflow: "hidden" }}>
           <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1 }}>전체 스캔 결과</span>
             <span style={{ fontSize: 10, color: C.muted }}>— 하한 근접 순 정렬</span>
+            {loading && (
+              <div className="spin" style={{ marginLeft: "auto", width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow }} />
+            )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
             {["종목", "현재가", "등락률", "RSI", "엔벨로프 위치", "상태"].map(h => (
               <span key={h} style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{h}</span>
             ))}
           </div>
-          <div className="fade-in">
-            {restPicks.map((s, i) => {
-              const lbl = pickLabel(s.env);
-              const ps = calcPickScore(s.env, s.rsi);
-              const scoreCol = ps >= 90 ? C.red : ps >= 75 ? C.yellow : C.green;
-              return (
-                <div key={s.ticker} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
-                  <div>
-                    <div style={{ fontWeight: 600, color: C.text }}>{s.name}</div>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</div>
+          {/* 도착한 행 */}
+          {restPicks.map((s, i) => {
+            const lbl = pickLabel(s.env);
+            const ps = calcPickScore(s.env, s.rsi);
+            const scoreCol = ps >= 90 ? C.red : ps >= 75 ? C.yellow : C.green;
+            return (
+              <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: C.text }}>{s.name}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</div>
+                </div>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: C.text }}>{fmt(s.price)}</div>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.changeRate >= 0 ? C.green : C.red }}>
+                  {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
+                </div>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted }}>{s.rsi}</div>
+                <div style={{ paddingRight: 8 }}>
+                  <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right,${C.green}30,${C.muted}15,${C.red}15)` }}>
+                    <div style={{ position: "absolute", left: `${Math.max(1, Math.min(99, s.env?.proximity ?? 50))}%`, top: -3, width: 10, height: 10, transform: "translateX(-50%)", borderRadius: "50%", background: scoreCol, border: `2px solid ${C.panel}` }} />
                   </div>
-                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: C.text }}>{fmt(s.price)}</div>
-                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.changeRate >= 0 ? C.green : C.red }}>
-                    {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
-                  </div>
-                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted }}>{s.rsi}</div>
-                  <div style={{ paddingRight: 8 }}>
-                    <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right,${C.green}30,${C.muted}15,${C.red}15)` }}>
-                      <div style={{ position: "absolute", left: `${Math.max(1, Math.min(99, s.env?.proximity ?? 50))}%`, top: -3, width: 10, height: 10, transform: "translateX(-50%)", borderRadius: "50%", background: scoreCol, border: `2px solid ${C.panel}` }} />
-                    </div>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted, marginTop: 3 }}>
-                      {s.env ? `${s.env.distPct >= 0 ? "+" : ""}${s.env.distPct.toFixed(2)}%` : "—"}
-                    </div>
-                  </div>
-                  <div>
-                    {lbl.color
-                      ? <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40` }}>{lbl.text}</span>
-                      : <span style={{ fontSize: 10, color: C.muted }}>{lbl.text}</span>}
+                  <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted, marginTop: 3 }}>
+                    {s.env ? `${s.env.distPct >= 0 ? "+" : ""}${s.env.distPct.toFixed(2)}%` : "—"}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div>
+                  {lbl.color
+                    ? <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40` }}>{lbl.text}</span>
+                    : <span style={{ fontSize: 10, color: C.muted }}>{lbl.text}</span>}
+                </div>
+              </div>
+            );
+          })}
+          {/* 아직 도착 안 한 행 — 스켈레톤 */}
+          {loading && Array.from({ length: Math.max(0, YW_PICK_TICKERS.length - stocks.length) }).map((_, i) => (
+            <SkeletonRow key={`skr-${i}`} />
+          ))}
         </div>
       )}
 
@@ -932,6 +1034,7 @@ function ClosingTab({ C }) {
   const S = makeS(C);
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadedCount, setLoadedCount] = useState(0);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("전체");
   const [sortBy, setSortBy] = useState("score");
@@ -939,15 +1042,32 @@ function ClosingTab({ C }) {
   const [section, setSection] = useState("recommend");
 
   const loadData = async () => {
-    setLoading(true); setError(null);
-    try {
-      const results = await Promise.allSettled(WATCH_TICKERS.map(t => fetchYahooQuote(t.ticker).then(d => ({ ...d, ...t }))));
-      const ok = results.filter(r => r.status === "fulfilled").map(r => r.value);
-      if (!ok.length) throw new Error("데이터를 불러올 수 없습니다");
-      setStocks(ok); setLastUpdated(new Date());
-    } catch (e) {
-      setError(e.message); setStocks(MOCK_CLOSING);
-    } finally { setLoading(false); }
+    setLoading(true);
+    setError(null);
+    setStocks([]);
+    setLoadedCount(0);
+
+    let anyOk = false;
+    await Promise.allSettled(
+      WATCH_TICKERS.map(t =>
+        fetchYahooQuote(t.ticker)
+          .then(d => {
+            anyOk = true;
+            setStocks(prev => [...prev, { ...d, ...t }]);
+            setLoadedCount(prev => prev + 1);
+          })
+          .catch(() => {
+            setLoadedCount(prev => prev + 1);
+          })
+      )
+    );
+
+    if (!anyOk) {
+      setError("데이터를 불러올 수 없습니다");
+      setStocks(MOCK_CLOSING);
+    }
+    setLastUpdated(new Date());
+    setLoading(false);
   };
   useEffect(() => { loadData(); }, []);
 
@@ -969,29 +1089,39 @@ function ClosingTab({ C }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-in">
-      {loading && stocks.length === 0 && <LoadingOverlay message={`${WATCH_TICKERS.length}개 종목 데이터 수신 중…`} C={C} />}
 
-      {/* 요약 */}
+      {/* 요약 — 도착하는 즉시 카운트 올라감 */}
       <div style={S.grid("repeat(4,1fr)")}>
-        <StatCard label="스캔 종목" value={loading ? "…" : `${summary.total}개`} color={C.accent} C={C} />
-        <StatCard label="강력매수" value={loading ? "…" : `${summary.strong}개`} color={C.green} C={C} />
-        <StatCard label="매수 신호" value={loading ? "…" : `${summary.buy}개`} color={C.yellow} C={C} />
-        <StatCard label="관망/주의" value={loading ? "…" : `${summary.other}개`} color={C.muted} C={C} />
+        <StatCard label="스캔 종목" value={`${summary.total}개`} color={C.accent} C={C} />
+        <StatCard label="강력매수" value={`${summary.strong}개`} color={C.green} C={C} />
+        <StatCard label="매수 신호" value={`${summary.buy}개`} color={C.yellow} C={C} />
+        <StatCard label="관망/주의" value={`${summary.other}개`} color={C.muted} C={C} />
       </div>
 
-      {/* 섹션 탭 + 새로고침 */}
-      <div style={{ ...S.panel, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {CLOSING_SECTIONS.map(t => (
-            <button key={t.id} onClick={() => setSection(t.id)} style={btnStyle(section === t.id, C.yellow)}>{t.label}</button>
-          ))}
+      {/* 섹션 탭 + 진행률 + 새로고침 */}
+      <div style={{ ...S.panel, padding: "10px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {CLOSING_SECTIONS.map(t => (
+              <button key={t.id} onClick={() => setSection(t.id)} style={btnStyle(section === t.id, C.yellow)}>{t.label}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+            {loading
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.accent }}>{loadedCount} / {WATCH_TICKERS.length} 로드</span>
+              : <button onClick={loadData} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.accent}`, background: `${C.accent}15`, color: C.accent }}>
+                🔄 새로고침
+              </button>
+            }
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {lastUpdated && <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
-          <button onClick={loadData} disabled={loading} style={{ ...btnStyle(false, C.accent), display: "flex", alignItems: "center", gap: 6, opacity: loading ? 0.6 : 1, cursor: loading ? "not-allowed" : "pointer", border: `1px solid ${loading ? C.border : C.accent}`, color: loading ? C.muted : C.accent }}>
-            {loading ? <><div className="spin" style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.accent, flexShrink: 0 }} />로딩 중…</> : "🔄 새로고침"}
-          </button>
-        </div>
+        {/* 진행률 바 */}
+        {loading && (
+          <div style={{ height: 3, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 2, width: `${(loadedCount / WATCH_TICKERS.length) * 100}%`, background: `linear-gradient(to right,${C.accent},${C.green})`, transition: "width 0.35s ease" }} />
+          </div>
+        )}
       </div>
 
       {error && (
@@ -1015,10 +1145,13 @@ function ClosingTab({ C }) {
               ))}
             </div>
           </div>
-          {loading
-            ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>{Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} C={C} />)}</div>
-            : <div className="fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>{filtered.map(s => <StockScoreCard key={s.ticker} s={s} C={C} />)}</div>
-          }
+          {/* 도착한 카드 즉시 표시 + 아직 안 온 자리는 스켈레톤 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
+            {filtered.map(s => <StockScoreCard key={s.ticker} s={s} C={C} />)}
+            {loading && Array.from({ length: Math.max(0, WATCH_TICKERS.length - stocks.length) }).map((_, i) => (
+              <SkeletonCard key={`sk-${i}`} C={C} />
+            ))}
+          </div>
         </div>
       )}
 
@@ -1034,27 +1167,32 @@ function ClosingTab({ C }) {
             <span style={S.monoLabel}>{label}</span>
             {loading && <div className="spin" style={{ marginLeft: "auto", width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.accent }} />}
           </div>
-          {loading
-            ? Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
-            : list.length === 0
-              ? <div style={{ padding: 24, color: C.muted, textAlign: "center" }}>{empty}</div>
-              : <div className="fade-in">{list.map((s, i) => <RankRow key={s.ticker} s={s} idx={i} valueKey={key} C={C} />)}</div>
-          }
+          {/* 도착한 행 즉시 표시 */}
+          {list.map((s, i) => <RankRow key={s.ticker} s={s} idx={i} valueKey={key} C={C} />)}
+          {/* 아직 안 온 행 스켈레톤 */}
+          {loading && Array.from({ length: Math.max(0, WATCH_TICKERS.length - stocks.length) }).map((_, i) => (
+            <SkeletonRow key={`skr-${i}`} />
+          ))}
+          {!loading && list.length === 0 && (
+            <div style={{ padding: 24, color: C.muted, textAlign: "center" }}>{empty}</div>
+          )}
         </div>
       ))}
 
       {/* 거래대금 */}
       {section === "value" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {loading
-            ? <div style={S.grid("repeat(3,1fr)")}>{[0, 1, 2].map(i => (
-              <div key={i} style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          {/* TOP3 메달 — 3개 도착할 때까지 스켈레톤 혼합 */}
+          <div style={S.grid("repeat(3,1fr)")}>
+            {valueList.slice(0, 3).map((s, i) => <MedalCard key={s.ticker} s={s} rank={i} C={C} />)}
+            {loading && Array.from({ length: Math.max(0, 3 - valueList.length) }).map((_, i) => (
+              <div key={`msk-${i}`} style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                 <div className="shimmer" style={{ width: 36, height: 36, borderRadius: "50%" }} />
                 <div className="shimmer" style={{ height: 14, width: 80, borderRadius: 4 }} />
                 <div className="shimmer" style={{ height: 24, width: 100, borderRadius: 4 }} />
-              </div>))}</div>
-            : <div className="fade-in" style={S.grid("repeat(3,1fr)")}>{valueList.slice(0, 3).map((s, i) => <MedalCard key={s.ticker} s={s} rank={i} C={C} />)}</div>
-          }
+              </div>
+            ))}
+          </div>
           <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span>💰</span><span style={S.monoLabel}>거래대금 전체 순위</span></div>
@@ -1063,10 +1201,12 @@ function ClosingTab({ C }) {
                 <span style={{ fontSize: 10, color: C.muted }}>거래대금 = 주가 × 거래량</span>
               </div>
             </div>
-            {loading
-              ? Array.from({ length: 7 }).map((_, i) => <SkeletonRow key={i} />)
-              : <div className="fade-in">{valueList.map((s, i) => <RankRow key={s.ticker} s={s} idx={i} valueKey="tradingValue" C={C} />)}</div>
-            }
+            {/* 도착한 행 즉시 표시 */}
+            {valueList.map((s, i) => <RankRow key={s.ticker} s={s} idx={i} valueKey="tradingValue" C={C} />)}
+            {/* 아직 안 온 행 스켈레톤 */}
+            {loading && Array.from({ length: Math.max(0, WATCH_TICKERS.length - stocks.length) }).map((_, i) => (
+              <SkeletonRow key={`vsk-${i}`} />
+            ))}
           </div>
         </div>
       )}
