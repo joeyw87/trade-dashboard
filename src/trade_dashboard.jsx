@@ -1683,6 +1683,38 @@ export default function StockDashboard() {
   const decFont = () => setFontSize(v => Math.max(10, v - 1));
   const resetFont = () => setFontSize(13);
 
+  // ── Render Cold Start 감지 ────────────────────────────
+  const RENDER_URL = "https://trade-backend-3o2e.onrender.com";
+  const COLD_START_MS = 3000; // 3초 이상 응답 없으면 안내
+  const [coldStartVisible, setColdStartVisible] = useState(false);
+  const [coldStartDone, setColdStartDone] = useState(false);
+  const [coldStartElapsed, setColdStartElapsed] = useState(0);
+
+  useEffect(() => {
+    let timer = null;
+    let interval = null;
+    const t0 = Date.now();
+
+    // COLD_START_MS 후에도 응답 없으면 안내 모달 표시
+    timer = setTimeout(() => {
+      setColdStartVisible(true);
+      // 경과 시간 카운터
+      interval = setInterval(() => {
+        setColdStartElapsed(Math.floor((Date.now() - t0) / 1000));
+      }, 1000);
+    }, COLD_START_MS);
+
+    fetch(`${RENDER_URL}/api/health`, { signal: AbortSignal.timeout(30000) })
+      .finally(() => {
+        clearTimeout(timer);
+        clearInterval(interval);
+        setColdStartVisible(false);
+        setColdStartDone(true);
+      });
+
+    return () => { clearTimeout(timer); clearInterval(interval); };
+  }, []);
+
   // ── State ─────────────────────────────────────────────
   const [tab, setTab] = useState("dashboard");
   const [selectedStock, setSelectedStock] = useState(MOCK_STOCKS[0]);
@@ -2180,6 +2212,37 @@ export default function StockDashboard() {
             </button>
           </div>
         </footer>
+
+        {/* ── Render Cold Start 안내 모달 ── */}
+        {coldStartVisible && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9998 }}>
+            <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 12, padding: "32px 36px", width: 360, boxShadow: "0 12px 48px rgba(0,0,0,0.6)", textAlign: "center" }}>
+              {/* 아이콘 — 잠자는 서버 */}
+              <div style={{ fontSize: "2.5em", marginBottom: 14 }}>🌙</div>
+              <div style={{ fontFamily: FONTS.mono, fontSize: "1.077em", fontWeight: 700, color: C.text, marginBottom: 10, letterSpacing: 0.5 }}>
+                서버 기동 중...
+              </div>
+              <div style={{ fontSize: "0.923em", color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>
+                무료 서버가 <span style={{ color: C.yellow, fontWeight: 600 }}>Sleep 모드</span>에서 깨어나고 있습니다.<br />
+                Cold Start 시간이 필요하니 잠시만 기다려 주세요.
+              </div>
+              {/* 스피너 + 경과 시간 */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 20 }}>
+                <div className="spin" style={{ width: 18, height: 18, borderRadius: "50%", border: `2.5px solid ${C.border}`, borderTopColor: C.accent, flexShrink: 0 }} />
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.accent }}>
+                  대기 중 {coldStartElapsed}초...
+                </span>
+              </div>
+              {/* 진행 바 (30초 기준) */}
+              <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 2, background: `linear-gradient(to right, ${C.accent}, ${C.green})`, width: `${Math.min(100, (coldStartElapsed / 30) * 100)}%`, transition: "width 1s linear" }} />
+              </div>
+              <div style={{ fontSize: "0.769em", color: C.muted, marginTop: 10 }}>
+                보통 10 ~ 30초 이내 완료됩니다.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── 관리자 보안코드 모달 ── */}
         {adminModalOpen && (
