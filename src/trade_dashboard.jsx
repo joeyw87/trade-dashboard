@@ -1807,7 +1807,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
         <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.yellow }}>종가베팅</div>
         <div style={{ fontSize: "1em", color: C.muted, textAlign: "center", lineHeight: 1.7 }}>
           RSI · 볼린저밴드 · 거래량을 복합 분석해 종가 매수 후보를 선별합니다.<br />
-          <span style={{ fontFamily: FONTS.mono, color: C.muted, fontSize: "0.846em" }}>{WATCH_TICKERS.length}개 종목 스캔</span>
+          <span style={{ fontFamily: FONTS.mono, color: C.muted, fontSize: "0.846em" }}>{YW_PICK_TICKERS.length}개 종목 스캔</span>
         </div>
         <button onClick={onReload} style={{ padding: "10px 32px", borderRadius: 6, fontSize: "1em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>
           ⚡ 조회 시작
@@ -1838,7 +1838,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
             {loading
-              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{loadedCount} / {WATCH_TICKERS.length} 로드</span>
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{loadedCount} / {YW_PICK_TICKERS.length} 로드</span>
               : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.accent}`, background: `${C.accent}15`, color: C.accent }}>
                 🔄 새로고침
               </button>
@@ -1847,7 +1847,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
         </div>
         {/* 진행률 바 */}
         {loading && (
-          <ProgressBar current={loadedCount} total={WATCH_TICKERS.length} accentColor={C.accent} C={C} />
+          <ProgressBar current={loadedCount} total={YW_PICK_TICKERS.length} accentColor={C.accent} C={C} />
         )}
       </div>
 
@@ -1875,7 +1875,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
           {/* 도착한 카드 즉시 표시 + 아직 안 온 자리는 스켈레톤 */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 12 }}>
             {filtered.map(s => <StockScoreCard key={s.ticker} s={s} C={C} />)}
-            {loading && Array.from({ length: Math.max(0, WATCH_TICKERS.length - stocks.length) }).map((_, i) => (
+            {loading && Array.from({ length: Math.max(0, YW_PICK_TICKERS.length - stocks.length) }).map((_, i) => (
               <SkeletonCard key={`sk-${i}`} C={C} />
             ))}
           </div>
@@ -1897,7 +1897,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
           {/* 도착한 행 즉시 표시 */}
           {list.map((s, i) => <RankRow key={s.ticker} s={s} idx={i} valueKey={key} C={C} />)}
           {/* 아직 안 온 행 스켈레톤 */}
-          {loading && Array.from({ length: Math.max(0, WATCH_TICKERS.length - stocks.length) }).map((_, i) => (
+          {loading && Array.from({ length: Math.max(0, YW_PICK_TICKERS.length - stocks.length) }).map((_, i) => (
             <SkeletonRow key={`skr-${i}`} />
           ))}
           {!loading && list.length === 0 && (
@@ -1931,7 +1931,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
             {/* 도착한 행 즉시 표시 */}
             {valueList.map((s, i) => <RankRow key={s.ticker} s={s} idx={i} valueKey="tradingValue" C={C} />)}
             {/* 아직 안 온 행 스켈레톤 */}
-            {loading && Array.from({ length: Math.max(0, WATCH_TICKERS.length - stocks.length) }).map((_, i) => (
+            {loading && Array.from({ length: Math.max(0, YW_PICK_TICKERS.length - stocks.length) }).map((_, i) => (
               <SkeletonRow key={`vsk-${i}`} />
             ))}
           </div>
@@ -2094,7 +2094,7 @@ export default function StockDashboard() {
     setClosingStocks([]);
     setClosingLoadedCount(0);
     let anyOk = false;
-    for (const t of WATCH_TICKERS) {
+    for (const t of YW_PICK_TICKERS) {
       try {
         const d = await fetchYahooQuote(t.ticker);
         anyOk = true;
