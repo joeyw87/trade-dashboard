@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
 const APP_VERSION = "1.4.0";
-const APP_DATE = "2026-03-06";
+const APP_DATE = "2025-03-06";
 const APP_NOTES = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
 
 // ════════════════════════════════════════════════════════
@@ -14,37 +14,37 @@ const APP_NOTES = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
 const THEME = {
   dark: {
     bg: "#070d14",
-    header: "#0a1622",
-    panel: "#0d1a27",
-    panelAlt: "#0a1018",
-    border: "#1a2d42",
-    accent: "#00d4ff",
-    green: "#26c96f",
-    red: "#ef4444",
-    text: "#c8e0f0",
-    muted: "#4a7a9b",
-    yellow: "#f0b429",
-    selected: "#112030",
+    header: "#0b1520",
+    panel: "#0f1e2e",
+    panelAlt: "#0b1520",
+    border: "#1e3550",
+    accent: "#38bdf8",   // 더 밝은 하늘색 → 강조 텍스트 선명
+    green: "#34d679",   // 더 밝고 선명한 초록
+    red: "#f87171",   // 부드러운 붉은색 (눈부심 감소)
+    text: "#e2edf7",   // 밝은 흰색 계열 → 본문 가독성 UP
+    muted: "#7da6c8",   // 기존보다 훨씬 밝아진 보조 텍스트
+    yellow: "#fbbf24",   // 선명한 노란색
+    selected: "#112840",
     scrollTrack: "#0f1923",
     scrollThumb: "#1e3a5a",
-    inputBg: "#0a1622",
+    inputBg: "#0b1520",
     inputBorder: "#1e3a5a",
-    shimmer1: "#0d1a27",
-    shimmer2: "#162436",
+    shimmer1: "#0f1e2e",
+    shimmer2: "#182e44",
   },
   light: {
     bg: "#f0f4f8",
     header: "#ffffff",
     panel: "#ffffff",
-    panelAlt: "#f8fafc",
-    border: "#d1dce8",
-    accent: "#0284c7",
-    green: "#16a34a",
-    red: "#dc2626",
-    text: "#1e293b",
-    muted: "#64748b",
-    yellow: "#d97706",
-    selected: "#e0f0ff",
+    panelAlt: "#f4f8fc",
+    border: "#c8d9e8",
+    accent: "#0369a1",   // 더 진한 파란색 → 흰 배경에 선명
+    green: "#15803d",   // 진한 초록
+    red: "#b91c1c",   // 진한 빨간색
+    text: "#0f172a",   // 거의 검정 → 최고 가독성
+    muted: "#475569",   // 기존보다 진해진 보조 텍스트
+    yellow: "#b45309",   // 흰 배경에 잘 보이는 amber
+    selected: "#dbeafe",
     scrollTrack: "#e2e8f0",
     scrollThumb: "#94a3b8",
     inputBg: "#f8fafc",
