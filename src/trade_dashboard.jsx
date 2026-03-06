@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.4.0";
-const APP_DATE     = "2026-03-06";
-const APP_NOTES    = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
+const APP_VERSION = "1.4.0";
+const APP_DATE = "2026-03-06";
+const APP_NOTES = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
 
 // ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
@@ -356,7 +356,7 @@ async function fetchYahooQuote(ticker) {
   const data = await response.json();
   const chart = data.chart.result[0];
   //로컬 백엔드 종료
-  
+
   const closes = chart.indicators.quote[0].close.filter(Boolean);
   const volumes = chart.indicators.quote[0].volume.filter(Boolean);
   const prices = chart.indicators.quote[0].close.filter(Boolean); // closes와 동일
@@ -435,7 +435,7 @@ const makeCSS = (C, isDark) => `
 
 const makeS = C => ({
   panel: { background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 },
-  monoLabel: { fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1 },
+  monoLabel: { fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 },
   monoVal: { fontFamily: FONTS.mono, fontWeight: 600 },
   infoBox: { background: C.panelAlt, borderRadius: 4, padding: "6px 8px", textAlign: "center" },
   flex: (gap = 8) => ({ display: "flex", alignItems: "center", gap }),
@@ -453,7 +453,7 @@ function ThemeToggle({ isDark, onToggle, C }) {
       title={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
       style={{
         display: "flex", alignItems: "center", gap: 6, padding: "4px 12px",
-        borderRadius: 20, cursor: "pointer", fontSize: 11, fontFamily: FONTS.mono,
+        borderRadius: 20, cursor: "pointer", fontSize: "0.846em", fontFamily: FONTS.mono,
         border: `1px solid ${C.border}`,
         background: isDark ? "#1a2d42" : "#e0f0ff",
         color: isDark ? C.yellow : C.accent,
@@ -472,7 +472,7 @@ function ThemeToggle({ isDark, onToggle, C }) {
           transition: "left 0.25s, background 0.25s",
           boxShadow: isDark ? `0 0 4px ${C.yellow}80` : `0 0 4px ${C.accent}80`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 6,
+          fontSize: "0.462em",
         }}>
           {isDark ? "☾" : "☀"}
         </div>
@@ -503,7 +503,7 @@ function ProgressBar({ current, total, accentColor, C }) {
           <div style={{ height: "100%", borderRadius: 2, width: `${pct}%`, background: `linear-gradient(to right, ${col}, ${C.green})`, transition: "width 0.35s ease" }} />
         </div>
       </div>
-      <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, minWidth: 52, textAlign: "right" }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, minWidth: 52, textAlign: "right" }}>
         {current} / {total}
       </span>
     </div>
@@ -516,10 +516,10 @@ function LoadingOverlay({ message, C }) {
       <div style={{ position: "relative", width: 64, height: 64, marginBottom: 20 }}>
         <div className="spin" style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.border}`, borderTopColor: C.accent }} />
         <div className="spin" style={{ position: "absolute", inset: 8, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow, animationDirection: "reverse", animationDuration: "0.7s" }} />
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONTS.mono, fontSize: 16, color: C.accent }}>◈</div>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONTS.mono, fontSize: "1.231em", color: C.accent }}>◈</div>
       </div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: 13, color: C.text, marginBottom: 6 }}>{message}</div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>Yahoo Finance API 호출 중...</div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: "1em", color: C.text, marginBottom: 6 }}>{message}</div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>Yahoo Finance API 호출 중...</div>
       <div style={{ marginTop: 20, width: 200, height: 2, background: C.border, borderRadius: 2, overflow: "hidden" }}>
         <div className="shimmer" style={{ height: "100%", width: "60%", borderRadius: 2 }} />
       </div>
@@ -584,7 +584,7 @@ function ChangeText({ value, C }) {
 function SignalBadge({ signal, C }) {
   const col = signalColor(signal, C);
   return (
-    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: `${col}20`, color: col, border: `1px solid ${col}40` }}>
+    <span style={{ fontSize: "0.846em", padding: "2px 8px", borderRadius: 10, background: `${col}20`, color: col, border: `1px solid ${col}40` }}>
       {signalIcon(signal)} {signal}
     </span>
   );
@@ -595,7 +595,7 @@ function PanelHeader({ label, right, C }) {
   return (
     <div style={{ ...S.flex(0), justifyContent: "space-between", marginBottom: 12 }}>
       <span style={S.monoLabel}>{label}</span>
-      {right && <span style={{ fontSize: 10, color: C.muted }}>{right}</span>}
+      {right && <span style={{ fontSize: "0.769em", color: C.muted }}>{right}</span>}
     </div>
   );
 }
@@ -603,9 +603,9 @@ function PanelHeader({ label, right, C }) {
 function StatCard({ label, value, color, unit = "", C }) {
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16, textAlign: "center" }}>
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 20, color }}>
-        {value}<span style={{ fontSize: 11, marginLeft: 2 }}>{unit}</span>
+      <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.538em", color }}>
+        {value}<span style={{ fontSize: "0.846em", marginLeft: 2 }}>{unit}</span>
       </div>
     </div>
   );
@@ -615,8 +615,8 @@ function SliderField({ label, value, min, max, onChange, color, C }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 12, color: C.text }}>{label}</span>
-        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color }}>{value}%</span>
+        <span style={{ fontSize: "0.923em", color: C.text }}>{label}</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.923em", color }}>{value}%</span>
       </div>
       <input type="range" min={min} max={max} value={value} onChange={e => onChange(+e.target.value)} style={{ width: "100%" }} />
     </div>
@@ -626,7 +626,7 @@ function SliderField({ label, value, min, max, onChange, color, C }) {
 function InputField({ label, C, ...props }) {
   return (
     <div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: "0.923em", color: C.muted, marginBottom: 6 }}>{label}</div>
       <input {...props} />
     </div>
   );
@@ -653,23 +653,23 @@ const CANDLE_DATA = generateCandles();
 
 // Yahoo Finance 티커로 지수·환율 fetch
 const MARKET_ITEMS = [
-  { id: "kospi",  label: "KOSPI",   ticker: "^KS11",   type: "index",    flag: "🇰🇷" },
-  { id: "kosdaq", label: "KOSDAQ",  ticker: "^KQ11",   type: "index",    flag: "🇰🇷" },
-  { id: "sp500",  label: "S&P 500", ticker: "^GSPC",   type: "index",    flag: "🇺🇸" },
-  { id: "usdkrw", label: "USD/KRW", ticker: "KRW=X",   type: "fx",       flag: "💱" },
-  { id: "usdjpy", label: "USD/JPY", ticker: "JPY=X",   type: "fx",       flag: "🇯🇵" },
-  { id: "nasdaq", label: "NASDAQ",  ticker: "^IXIC",   type: "index",    flag: "🇺🇸" },
+  { id: "kospi", label: "KOSPI", ticker: "^KS11", type: "index", flag: "🇰🇷" },
+  { id: "kosdaq", label: "KOSDAQ", ticker: "^KQ11", type: "index", flag: "🇰🇷" },
+  { id: "sp500", label: "S&P 500", ticker: "^GSPC", type: "index", flag: "🇺🇸" },
+  { id: "usdkrw", label: "USD/KRW", ticker: "KRW=X", type: "fx", flag: "💱" },
+  { id: "usdjpy", label: "USD/JPY", ticker: "JPY=X", type: "fx", flag: "🇯🇵" },
+  { id: "nasdaq", label: "NASDAQ", ticker: "^IXIC", type: "index", flag: "🇺🇸" },
 ];
 
 async function fetchMarketItem(item) {
-  const url   = `https://query1.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5d`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5d`;
   const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
   const chart = JSON.parse((await (await fetch(proxy)).json()).contents).chart.result[0];
-  const meta  = chart.meta;
-  const price      = meta.regularMarketPrice;
-  const prevClose  = meta.previousClose || meta.chartPreviousClose;
+  const meta = chart.meta;
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.previousClose || meta.chartPreviousClose;
   const changeRate = ((price - prevClose) / prevClose) * 100;
-  const closes     = chart.indicators.quote[0].close.filter(Boolean);
+  const closes = chart.indicators.quote[0].close.filter(Boolean);
   return { ...item, price, prevClose, changeRate, closes };
 }
 
@@ -677,18 +677,18 @@ function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 2 }}>MARKET OVERVIEW</span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 2 }}>MARKET OVERVIEW</span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {lastUpdated && !loading && (
-            <span style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>
           )}
           {loading ? (
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div className="spin" style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px solid ${C.border}`, borderTopColor: C.accent }} />
-              <span style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted }}>로딩 중</span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>로딩 중</span>
             </div>
           ) : (
-            <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 4, fontSize: 10, cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontFamily: FONTS.mono }}>
+            <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontFamily: FONTS.mono }}>
               🔄 새로고침
             </button>
           )}
@@ -696,26 +696,26 @@ function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
         {items.map(item => {
-          const up   = (item.changeRate ?? 0) >= 0;
-          const col  = item.price === null ? C.muted : up ? C.green : C.red;
+          const up = (item.changeRate ?? 0) >= 0;
+          const col = item.price === null ? C.muted : up ? C.green : C.red;
           const isFx = item.type === "fx";
           return (
             <div key={item.id} style={{ background: C.panelAlt, borderRadius: 6, padding: "10px 12px", borderLeft: `3px solid ${item.price === null ? C.border : col}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: 12 }}>{item.flag}</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontSize: "0.923em" }}>{item.flag}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, fontWeight: 600 }}>{item.label}</span>
               </div>
               {item.price === null ? (
                 <div className="shimmer" style={{ height: 18, width: "70%", borderRadius: 4, marginBottom: 4 }} />
               ) : (
-                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 15, color: C.text, marginBottom: 3 }}>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.154em", color: C.text, marginBottom: 3 }}>
                   {isFx ? item.price.toFixed(2) : item.price >= 1000 ? fmt(Math.round(item.price)) : item.price.toFixed(2)}
                 </div>
               )}
               {item.changeRate === null ? (
                 <div className="shimmer" style={{ height: 11, width: "50%", borderRadius: 4 }} />
               ) : (
-                <div style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: col }}>
+                <div style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 600, color: col }}>
                   {up ? "▲" : "▼"} {Math.abs(item.changeRate).toFixed(2)}%
                 </div>
               )}
@@ -735,29 +735,29 @@ function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
 function MarketDetailPanel({ C }) {
   // KOSPI / KOSDAQ / S&P500 / 환율 상세 — 업종별 색 구분
   const sectors = [
-    { label: "반도체",   change:  1.24, color: "#00d4ff" },
-    { label: "2차전지",  change: -0.83, color: "#f0b429" },
-    { label: "바이오",   change:  0.55, color: "#26c96f" },
-    { label: "자동차",   change:  1.87, color: "#a78bfa" },
-    { label: "금융",     change: -0.21, color: "#fb923c" },
-    { label: "에너지",   change: -1.12, color: "#ef4444" },
-    { label: "IT서비스", change:  0.34, color: "#22d3ee" },
-    { label: "철강·소재",change: -0.67, color: "#94a3b8" },
+    { label: "반도체", change: 1.24, color: "#00d4ff" },
+    { label: "2차전지", change: -0.83, color: "#f0b429" },
+    { label: "바이오", change: 0.55, color: "#26c96f" },
+    { label: "자동차", change: 1.87, color: "#a78bfa" },
+    { label: "금융", change: -0.21, color: "#fb923c" },
+    { label: "에너지", change: -1.12, color: "#ef4444" },
+    { label: "IT서비스", change: 0.34, color: "#22d3ee" },
+    { label: "철강·소재", change: -0.67, color: "#94a3b8" },
   ];
 
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}>
-      <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 2, marginBottom: 12 }}>KOSPI 업종별 등락</div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 2, marginBottom: 12 }}>KOSPI 업종별 등락</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
         {sectors.map(sec => {
-          const up  = sec.change >= 0;
+          const up = sec.change >= 0;
           const col = up ? C.green : C.red;
           const barW = Math.min(100, Math.abs(sec.change) / 2 * 100);
           return (
             <div key={sec.label} style={{ background: C.panelAlt, borderRadius: 5, padding: "8px 10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                <span style={{ fontSize: 11, color: C.text, fontWeight: 500 }}>{sec.label}</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 700, color: col }}>
+                <span style={{ fontSize: "0.846em", color: C.text, fontWeight: 500 }}>{sec.label}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 700, color: col }}>
                   {up ? "+" : ""}{sec.change.toFixed(2)}%
                 </span>
               </div>
@@ -818,23 +818,33 @@ function CandleChart({ candles, C }) {
 
 function StockScoreCard({ s, C }) {
   const S = makeS(C);
+  if (s.apiError) return (
+    <div style={{ ...S.panel, borderLeft: `3px solid ${C.red}40`, opacity: 0.55, position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <span style={{ fontWeight: 700, fontSize: "1.077em", color: C.muted }}>{s.name}</span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}</span>
+        <span style={{ fontSize: "0.692em", color: C.red, background: `${C.red}15`, border: `1px solid ${C.red}30`, borderRadius: 3, padding: "1px 5px" }}>조회실패</span>
+      </div>
+      <div style={{ fontSize: "0.846em", color: C.muted }}>API 호출에 실패했습니다. 재스캔을 시도해주세요.</div>
+    </div>
+  );
   const sc = signalColor(s.signal, C);
   const col = scoreColor(s.score, C);
   return (
     <div style={{ ...S.panel, borderLeft: `3px solid ${sc}`, position: "relative" }}>
       <div style={{ position: "absolute", top: 12, right: 12, width: 46, height: 46, borderRadius: "50%", background: `${col}15`, border: `2px solid ${col}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 14, color: col, lineHeight: 1 }}>{s.score}</span>
-        <span style={{ fontSize: 8, color: C.muted }}>점</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.077em", color: col, lineHeight: 1 }}>{s.score}</span>
+        <span style={{ fontSize: "0.615em", color: C.muted }}>점</span>
       </div>
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{s.name}</span>
-          <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 10, color: C.muted }}>{s.ticker}</span>
+          <span style={{ fontWeight: 700, fontSize: "1.077em", color: C.text }}>{s.name}</span>
+          <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.769em", color: C.muted }}>{s.ticker}</span>
         </div>
         <SignalBadge signal={s.signal} C={C} />
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 17, color: C.text }}>{fmt(s.price)}</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.308em", color: C.text }}>{fmt(s.price)}</span>
         <ChangeText value={s.changeRate} C={C} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
@@ -844,20 +854,20 @@ function StockScoreCard({ s, C }) {
           ["볼린저", s.bb, C.accent],
         ].map(([label, val, color]) => (
           <div key={label} style={S.infoBox}>
-            <div style={{ fontSize: 9, color: C.muted, marginBottom: 2 }}>{label}</div>
-            <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color }}>{val}</div>
+            <div style={{ fontSize: "0.692em", color: C.muted, marginBottom: 2 }}>{label}</div>
+            <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.846em", color }}>{val}</div>
           </div>
         ))}
       </div>
       <div style={{ marginBottom: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 3 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.692em", color: C.muted, marginBottom: 3 }}>
           <span>하단</span><span>볼린저밴드 위치</span><span>상단</span>
         </div>
         <div style={{ height: 4, background: C.border, borderRadius: 2, position: "relative" }}>
           <div style={{ position: "absolute", left: `${Math.min(95, Math.max(2, s.bbPos ?? 50))}%`, top: -3, width: 10, height: 10, borderRadius: "50%", background: C.accent, transform: "translateX(-50%)", boxShadow: `0 0 6px ${C.accent}` }} />
         </div>
       </div>
-      <div style={{ fontSize: 11, color: C.muted, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>💡 {s.reason}</div>
+      <div style={{ fontSize: "0.846em", color: C.muted, borderTop: `1px solid ${C.border}`, paddingTop: 8 }}>💡 {s.reason}</div>
     </div>
   );
 }
@@ -867,20 +877,30 @@ function MedalCard({ s, rank, C }) {
   const borderCols = [C.yellow, "#aaaaaa", "#cd7f32"];
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16, borderTop: `3px solid ${borderCols[rank]}`, textAlign: "center" }}>
-      <div style={{ fontSize: 22, marginBottom: 4 }}>{medals[rank]}</div>
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, color: C.text }}>{s.name}</div>
-      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 22, color: C.yellow, marginBottom: 4 }}>{fmtValue(s.tradingValue)}</div>
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>거래량 {(s.volume / 10000).toFixed(0)}만주 · {fmt(s.price)}원</div>
+      <div style={{ fontSize: "1.692em", marginBottom: 4 }}>{medals[rank]}</div>
+      <div style={{ fontWeight: 700, fontSize: "1.077em", marginBottom: 2, color: C.text }}>{s.name}</div>
+      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.692em", color: C.yellow, marginBottom: 4 }}>{fmtValue(s.tradingValue)}</div>
+      <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 8 }}>거래량 {(s.volume / 10000).toFixed(0)}만주 · {fmt(s.price)}원</div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, alignItems: "center" }}>
         <ChangeText value={s.changeRate} C={C} />
         <span style={{ color: C.muted }}>|</span>
-        <span style={{ fontSize: 11, color: s.volRate >= 200 ? C.green : C.muted }}>거래량비 {s.volRate}%</span>
+        <span style={{ fontSize: "0.846em", color: s.volRate >= 200 ? C.green : C.muted }}>거래량비 {s.volRate}%</span>
       </div>
     </div>
   );
 }
 
 function RankRow({ s, idx, valueKey, C }) {
+  if (s.apiError) return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderBottom: `1px solid ${C.border}20`, opacity: 0.45, background: `${C.red}05` }}>
+      <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.923em", color: C.muted, minWidth: 20 }}>—</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 600, fontSize: "1em", color: C.muted }}>{s.name}</div>
+        <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}</div>
+      </div>
+      <span style={{ fontSize: "0.692em", color: C.red, background: `${C.red}15`, border: `1px solid ${C.red}30`, borderRadius: 3, padding: "2px 6px" }}>조회실패</span>
+    </div>
+  );
   const display = {
     changeRate: { val: fmtPct(s.changeRate, true), sub: `${fmt(s.price)}원`, col: s.changeRate >= 0 ? C.green : C.red },
     volRate: { val: `${s.volRate}%`, sub: `거래대금 ${fmtValue(s.tradingValue)}`, col: s.volRate >= 300 ? C.green : C.yellow },
@@ -889,14 +909,14 @@ function RankRow({ s, idx, valueKey, C }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderBottom: `1px solid ${C.border}20`, background: idx === 0 ? `${display.col}08` : "transparent" }}>
-      <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: idx < 3 ? C.yellow : C.muted, minWidth: 20 }}>#{idx + 1}</span>
+      <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.923em", color: idx < 3 ? C.yellow : C.muted, minWidth: 20 }}>#{idx + 1}</span>
       <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, fontSize: 13, color: C.text }}>{s.name}</div>
-        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 10, color: C.muted }}>{s.ticker}</div>
+        <div style={{ fontWeight: 600, fontSize: "1em", color: C.text }}>{s.name}</div>
+        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.769em", color: C.muted }}>{s.ticker}</div>
       </div>
       <div style={{ textAlign: "right" }}>
-        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 14, color: display.col }}>{display.val}</div>
-        <div style={{ fontSize: 11, color: C.muted }}>{display.sub}</div>
+        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.077em", color: display.col }}>{display.val}</div>
+        <div style={{ fontSize: "0.846em", color: C.muted }}>{display.sub}</div>
       </div>
       <SignalBadge signal={s.signal} C={C} />
     </div>
@@ -945,14 +965,14 @@ function EnvelopeBar({ env, C }) {
   const dotColor = env.distPct < 0 ? C.red : env.distPct < 1 ? C.yellow : env.distPct < 3 ? C.green : C.muted;
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 3 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.692em", color: C.muted, marginBottom: 3 }}>
         <span>하한 -{env.kPct}%</span><span>MA{env.period}</span><span>상한 +{env.kPct}%</span>
       </div>
       <div style={{ position: "relative", height: 6, borderRadius: 3, background: `linear-gradient(to right, ${C.green}30, ${C.muted}20, ${C.red}20)` }}>
         <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 10, background: C.border }} />
         <div style={{ position: "absolute", left: `${pct}%`, top: -3, transform: "translateX(-50%)", width: 12, height: 12, borderRadius: "50%", background: dotColor, border: `2px solid ${C.panel}`, boxShadow: `0 0 6px ${dotColor}` }} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginTop: 5 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.692em", color: C.muted, marginTop: 5 }}>
         <span style={{ color: dotColor, fontFamily: FONTS.mono, fontWeight: 600 }}>
           {env.distPct >= 0 ? "+" : ""}{env.distPct.toFixed(2)}% (하한 대비)
         </span>
@@ -973,26 +993,26 @@ function PickCard({ s, rank, C }) {
       <div style={{ position: "absolute", top: -10, left: 14, fontSize: rank < 4 ? 18 : 12, lineHeight: 1 }}>
         {rank < 4
           ? medals[rank]
-          : <span style={{ background: C.panelAlt, border: `1px solid ${C.border}`, borderRadius: 20, padding: "1px 7px", fontSize: 10, color: C.muted, fontFamily: FONTS.mono }}>#{rank + 1}</span>}
+          : <span style={{ background: C.panelAlt, border: `1px solid ${C.border}`, borderRadius: 20, padding: "1px 7px", fontSize: "0.769em", color: C.muted, fontFamily: FONTS.mono }}>#{rank + 1}</span>}
       </div>
       {/* 점수 원형 */}
       <div style={{ position: "absolute", top: 10, right: 12, width: 44, height: 44, borderRadius: "50%", background: `${scoreCol}12`, border: `2px solid ${scoreCol}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 13, color: scoreCol, lineHeight: 1 }}>{pickScore}</span>
-        <span style={{ fontSize: 8, color: C.muted }}>점</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: scoreCol, lineHeight: 1 }}>{pickScore}</span>
+        <span style={{ fontSize: "0.615em", color: C.muted }}>점</span>
       </div>
       {/* 종목명 */}
       <div style={{ marginTop: 10, marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: C.text }}>{s.name}</span>
-          <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</span>
+          <span style={{ fontWeight: 700, fontSize: "1.154em", color: C.text }}>{s.name}</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}</span>
         </div>
         {lbl.color
-          ? <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40`, fontWeight: 600 }}>{lbl.text}</span>
-          : <span style={{ fontSize: 11, color: C.muted }}>{lbl.text}</span>}
+          ? <span style={{ fontSize: "0.846em", padding: "2px 10px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40`, fontWeight: 600 }}>{lbl.text}</span>
+          : <span style={{ fontSize: "0.846em", color: C.muted }}>{lbl.text}</span>}
       </div>
       {/* 가격 */}
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 18, color: C.text }}>{fmt(s.price)}</span>
+        <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.385em", color: C.text }}>{fmt(s.price)}</span>
         <span style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.changeRate >= 0 ? C.green : C.red }}>
           {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
         </span>
@@ -1008,13 +1028,13 @@ function PickCard({ s, rank, C }) {
           ["5일거래대금", s.tv5dAvg ? fmtValue(s.tv5dAvg) : "—", C.accent],
         ].map(([label, val, color]) => (
           <div key={label} style={{ background: C.panelAlt, borderRadius: 4, padding: "5px 8px", textAlign: "center" }}>
-            <div style={{ fontSize: 9, color: C.muted, marginBottom: 2 }}>{label}</div>
-            <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color }}>{val}</div>
+            <div style={{ fontSize: "0.692em", color: C.muted, marginBottom: 2 }}>{label}</div>
+            <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.846em", color }}>{val}</div>
           </div>
         ))}
       </div>
       {/* 힌트 */}
-      <div style={{ fontSize: 11, color: C.muted, borderTop: `1px solid ${C.border}`, paddingTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: "0.846em", color: C.muted, borderTop: `1px solid ${C.border}`, paddingTop: 8, lineHeight: 1.5 }}>
         {s.env?.distPct < 0 ? "💡 하한선 이탈 — 반등 가능성, 추세 확인 필수"
           : s.env?.distPct < 1 ? "💡 하한선 터치 — 분할 매수 진입 고려 구간"
             : s.env?.distPct < 3 ? "💡 하한선 접근 중 — 관심 등록 & 추이 관찰"
@@ -1027,30 +1047,30 @@ function PickCard({ s, rank, C }) {
 function EnvelopeSettings({ period, kPct, setPeriod, setKPct, C }) {
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
-      <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 14 }}>엔벨로프 파라미터</div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 14 }}>엔벨로프 파라미터</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 5 }}>이동평균 기간</div>
+          <div style={{ fontSize: "0.923em", color: C.muted, marginBottom: 5 }}>이동평균 기간</div>
           <div style={{ display: "flex", gap: 6 }}>
             {[10, 20, 30, 60].map(v => (
-              <button key={v} onClick={() => setPeriod(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${period === v ? C.accent : C.border}`, background: period === v ? `${C.accent}18` : "transparent", color: period === v ? C.accent : C.muted }}>
+              <button key={v} onClick={() => setPeriod(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${period === v ? C.accent : C.border}`, background: period === v ? `${C.accent}18` : "transparent", color: period === v ? C.accent : C.muted }}>
                 {v}일
               </button>
             ))}
           </div>
         </div>
         <div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 5 }}>밴드폭 (%)</div>
+          <div style={{ fontSize: "0.923em", color: C.muted, marginBottom: 5 }}>밴드폭 (%)</div>
           <div style={{ display: "flex", gap: 6 }}>
             {[3, 4, 5, 8, 10].map(v => (
-              <button key={v} onClick={() => setKPct(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${kPct === v ? C.yellow : C.border}`, background: kPct === v ? `${C.yellow}18` : "transparent", color: kPct === v ? C.yellow : C.muted }}>
+              <button key={v} onClick={() => setKPct(v)} style={{ flex: 1, padding: "5px 0", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${kPct === v ? C.yellow : C.border}`, background: kPct === v ? `${C.yellow}18` : "transparent", color: kPct === v ? C.yellow : C.muted }}>
                 ±{v}%
               </button>
             ))}
           </div>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: C.muted, background: C.panelAlt, borderRadius: 4, padding: "8px 12px", lineHeight: 1.6 }}>
+      <div style={{ fontSize: "0.846em", color: C.muted, background: C.panelAlt, borderRadius: 4, padding: "8px 12px", lineHeight: 1.6 }}>
         <span style={{ color: C.accent, fontWeight: 600 }}>엔벨로프(Envelope)</span>란 이동평균(MA)을 중심으로
         상·하 일정 % 채널을 그려 <span style={{ color: C.green }}>하한 지지</span> / <span style={{ color: C.red }}>상한 저항</span>을 포착하는 추세 지표입니다.
       </div>
@@ -1071,7 +1091,8 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
   const [volFilterOn, setVolFilterOn] = useState(true);
 
   // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산
-  const computed = stocks.map(s => ({
+  const apiFailedStocks = stocks.filter(s => s.apiError);
+  const computed = stocks.filter(s => !s.apiError).map(s => ({
     ...s,
     env: s.closes?.length ? calcEnvelope(s.closes, envPeriod, envKPct) : s.env,
     // 선택된 기간의 평균 거래량·거래대금
@@ -1111,14 +1132,14 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
   // 아직 한 번도 조회하지 않은 상태
   if (!loading && stocks.length === 0 && !error) {
     return (
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:80, gap:20 }} className="slide-in">
-        <div style={{ fontSize:40 }}>⭐</div>
-        <div style={{ fontFamily:FONTS.mono, fontSize:16, fontWeight:700, color:C.yellow }}>YW's Pick</div>
-        <div style={{ fontSize:13, color:C.muted, textAlign:"center", lineHeight:1.7 }}>
-          엔벨로프 하한 근접 종목을 스캔합니다.<br/>
-          <span style={{ fontFamily:FONTS.mono, color:C.muted, fontSize:11 }}>{YW_PICK_TICKERS.length}개 종목 · MA20 ±4%</span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 20 }} className="slide-in">
+        <div style={{ fontSize: "3.077em" }}>⭐</div>
+        <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.yellow }}>YW's Pick</div>
+        <div style={{ fontSize: "1em", color: C.muted, textAlign: "center", lineHeight: 1.7 }}>
+          엔벨로프 하한 근접 종목을 스캔합니다.<br />
+          <span style={{ fontFamily: FONTS.mono, color: C.muted, fontSize: "0.846em" }}>{YW_PICK_TICKERS.length}개 종목 · MA20 ±4%</span>
         </div>
-        <button onClick={onReload} style={{ padding:"10px 32px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", border:`1px solid ${C.yellow}`, background:`${C.yellow}18`, color:C.yellow, fontFamily:FONTS.mono }}>
+        <button onClick={onReload} style={{ padding: "10px 32px", borderRadius: 6, fontSize: "1em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>
           🔍 스캔 시작
         </button>
       </div>
@@ -1132,14 +1153,14 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
       <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: loading ? 12 : 0 }}>
           <div>
-            <div style={{ fontFamily: FONTS.mono, fontSize: 18, fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ YW's Pick</div>
-            <div style={{ fontSize: 12, color: C.muted }}>엔벨로프 하한선 기준 · 지지구간 근접 종목 자동 선별</div>
+            <div style={{ fontFamily: FONTS.mono, fontSize: "1.385em", fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ YW's Pick</div>
+            <div style={{ fontSize: "0.923em", color: C.muted }}>엔벨로프 하한선 기준 · 지지구간 근접 종목 자동 선별</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
             {loading
-              ? <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.yellow }}>{loadedCount} / {YW_PICK_TICKERS.length} 완료</span>
-              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.yellow }}>{loadedCount} / {YW_PICK_TICKERS.length} 완료</span>
+              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>
                 🔍 재스캔
               </button>
             }
@@ -1166,9 +1187,9 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
             {/* 헤더 + ON/OFF 토글 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1 }}>거래량·거래대금 필터</span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>거래량·거래대금 필터</span>
               <div onClick={() => setVolFilterOn(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                <span style={{ fontSize: 11, color: volFilterOn ? C.green : C.muted }}>{volFilterOn ? "ON" : "OFF"}</span>
+                <span style={{ fontSize: "0.846em", color: volFilterOn ? C.green : C.muted }}>{volFilterOn ? "ON" : "OFF"}</span>
                 <div style={{ width: 36, height: 18, borderRadius: 9, background: volFilterOn ? C.green : C.border, position: "relative", transition: "background 0.25s" }}>
                   <div style={{ position: "absolute", top: 2, left: volFilterOn ? 18 : 2, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.25s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
                 </div>
@@ -1178,10 +1199,10 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
             <div style={{ opacity: volFilterOn ? 1 : 0.4, pointerEvents: volFilterOn ? "auto" : "none", display: "flex", flexDirection: "column", gap: 12 }}>
               {/* 기준 기간 선택 */}
               <div>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>기준 기간</div>
+                <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>기준 기간</div>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[["3", "최근 3일 평균"], ["5", "최근 5일 평균"]].map(([v, label]) => (
-                    <button key={v} onClick={() => setVolPeriod(+v)} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${volPeriod === +v ? C.accent : C.border}`, background: volPeriod === +v ? `${C.accent}18` : "transparent", color: volPeriod === +v ? C.accent : C.muted, fontWeight: volPeriod === +v ? 600 : 400 }}>
+                    <button key={v} onClick={() => setVolPeriod(+v)} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${volPeriod === +v ? C.accent : C.border}`, background: volPeriod === +v ? `${C.accent}18` : "transparent", color: volPeriod === +v ? C.accent : C.muted, fontWeight: volPeriod === +v ? 600 : 400 }}>
                       {label}
                     </button>
                   ))}
@@ -1190,10 +1211,10 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
 
               {/* 기준 단위 선택 */}
               <div>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>필터 기준</div>
+                <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>필터 기준</div>
                 <div style={{ display: "flex", gap: 6 }}>
                   {["만주", "억원"].map(unit => (
-                    <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 30); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: 12, cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
+                    <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 30); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
                       거래{unit === "만주" ? "량" : "대금"} ({unit})
                     </button>
                   ))}
@@ -1203,29 +1224,41 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
               {/* 최솟값 슬라이더 */}
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: C.muted }}>
+                  <span style={{ fontSize: "0.846em", color: C.muted }}>
                     {minVolUnit === "만주" ? "최소 평균 거래량" : "최소 평균 거래대금"}
                   </span>
-                  <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: 13, color: C.accent }}>
+                  <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: C.accent }}>
                     {minVolVal.toLocaleString()}{minVolUnit}
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min={minVolUnit === "만주" ? 1 : 1}
-                  max={minVolUnit === "만주" ? 500 : 500}
-                  step={minVolUnit === "만주" ? 5 : 5}
-                  value={minVolVal}
-                  onChange={e => setMinVolVal(+e.target.value)}
-                  style={{ width: "100%" }}
-                />
+                {/* 거래량(만주): 슬라이더 / 거래대금(억원): 직접 입력 */}
+                {minVolUnit === "만주" ? (
+                  <input
+                    type="range"
+                    min={1} max={500} step={5}
+                    value={minVolVal}
+                    onChange={e => setMinVolVal(+e.target.value)}
+                    style={{ width: "100%" }}
+                  />
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      type="number"
+                      min={1} step={10}
+                      value={minVolVal}
+                      onChange={e => setMinVolVal(Math.max(1, +e.target.value || 1))}
+                      style={{ flex: 1, padding: "5px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", outline: "none" }}
+                    />
+                    <span style={{ fontSize: "0.846em", color: C.muted, whiteSpace: "nowrap" }}>억원 이상</span>
+                  </div>
+                )}
                 {/* 빠른 선택 프리셋 */}
                 <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
                   {(minVolUnit === "만주"
                     ? [[10, "10만주"], [50, "50만주"], [100, "100만주"], [200, "200만주"]]
-                    : [[10, "10억"], [30, "30억"], [100, "100억"], [300, "300억"]]
+                    : [[10, "10억"], [50, "50억"], [100, "100억"], [500, "500억"], [1000, "1000억"], [3000, "3000억"], [5000, "5000억"]]
                   ).map(([v, label]) => (
-                    <button key={v} onClick={() => setMinVolVal(v)} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", border: `1px solid ${minVolVal === v ? C.accent : C.border}`, background: minVolVal === v ? `${C.accent}15` : "transparent", color: minVolVal === v ? C.accent : C.muted }}>
+                    <button key={v} onClick={() => setMinVolVal(v)} style={{ padding: "3px 10px", borderRadius: 20, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${minVolVal === v ? C.accent : C.border}`, background: minVolVal === v ? `${C.accent}15` : "transparent", color: minVolVal === v ? C.accent : C.muted }}>
                       {label}
                     </button>
                   ))}
@@ -1234,10 +1267,10 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
 
               {/* 필터 적용 현황 */}
               <div style={{ background: C.panelAlt, borderRadius: 4, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: C.muted }}>
+                <span style={{ fontSize: "0.846em", color: C.muted }}>
                   {volPeriod}일 평균 {minVolUnit === "만주" ? "거래량" : "거래대금"} ≥ {minVolVal.toLocaleString()}{minVolUnit}
                 </span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: 12, fontWeight: 700, color: C.green }}>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", fontWeight: 700, color: C.green }}>
                   {computed.filter(passVolFilter).length} / {computed.length} 통과
                 </span>
               </div>
@@ -1245,14 +1278,14 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
           </div>
         </div>
         <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
-          <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1, marginBottom: 10 }}>필터</div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 10 }}>필터</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {FILTER_LABELS.map(f => {
               const lbl = pickLabel({ label: f });
               const active = filterLabel === f;
               const col = lbl.color || C.accent;
               return (
-                <button key={f} onClick={() => setFilterLabel(f)} style={{ padding: "6px 12px", borderRadius: 4, fontSize: 12, cursor: "pointer", textAlign: "left", border: `1px solid ${active ? col : C.border}`, background: active ? `${col}15` : "transparent", color: active ? col : C.muted, fontWeight: active ? 600 : 400 }}>
+                <button key={f} onClick={() => setFilterLabel(f)} style={{ padding: "6px 12px", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", textAlign: "left", border: `1px solid ${active ? col : C.border}`, background: active ? `${col}15` : "transparent", color: active ? col : C.muted, fontWeight: active ? 600 : 400 }}>
                   {f === "전체" ? "◈ 전체" : lbl.text}
                 </button>
               );
@@ -1262,14 +1295,14 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
       </div>
 
       {error && (
-        <div style={{ background: `${C.red}10`, border: `1px solid ${C.red}40`, borderRadius: 6, padding: 12, fontSize: 12, color: C.red }}>
+        <div style={{ background: `${C.red}10`, border: `1px solid ${C.red}40`, borderRadius: 6, padding: 12, fontSize: "0.923em", color: C.red }}>
           ⚠ {error} — Mock 데이터로 표시 중입니다.
         </div>
       )}
 
       {/* TOP 3 카드 — 도착한 순서대로 즉시 표시, 나머지 자리는 스켈레톤 */}
       <div>
-        <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.yellow, letterSpacing: 2, marginBottom: 10 }}>▶ TOP PICKS — 하한 최근접 종목</div>
+        <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.yellow, letterSpacing: 2, marginBottom: 10 }}>▶ TOP PICKS — 하한 최근접 종목</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
           {topPicks.map((s, i) => <PickCard key={s.ticker} s={s} rank={i} C={C} />)}
           {/* 아직 안 도착한 TOP3 자리를 스켈레톤으로 채움 */}
@@ -1283,15 +1316,15 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
       {(restPicks.length > 0 || loading) && (
         <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, overflow: "hidden" }}>
           <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, letterSpacing: 1 }}>전체 스캔 결과</span>
-            <span style={{ fontSize: 10, color: C.muted }}>— 하한 근접 순 정렬</span>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>전체 스캔 결과</span>
+            <span style={{ fontSize: "0.769em", color: C.muted }}>— 하한 근접 순 정렬</span>
             {loading && (
               <div className="spin" style={{ marginLeft: "auto", width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow }} />
             )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
             {["종목", "현재가", "등락률", "RSI", `${volPeriod}일 거래량`, "엔벨로프 위치", "상태"].map(h => (
-              <span key={h} style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{h}</span>
+              <span key={h} style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{h}</span>
             ))}
           </div>
           {/* 도착한 행 */}
@@ -1303,37 +1336,43 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
             const avgTv = volPeriod === 3 ? s.tv3dAvg : s.tv5dAvg;
             const volOk = !volFilterOn || passVolFilter(s);
             return (
-              <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
+              <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: s.apiError ? `${C.red}06` : i % 2 === 0 ? "transparent" : `${C.panelAlt}50`, opacity: s.apiError ? 0.55 : 1 }}>
                 <div>
-                  <div style={{ fontWeight: 600, color: C.text }}>{s.name}</div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted }}>{s.ticker}</div>
+                  <div style={{ fontWeight: 600, color: s.apiError ? C.muted : C.text }}>{s.name}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}
+                    {s.apiError && <span style={{ marginLeft: 5, fontSize: "0.692em", color: C.red, background: `${C.red}15`, border: `1px solid ${C.red}30`, borderRadius: 3, padding: "1px 4px" }}>조회실패</span>}
+                  </div>
                 </div>
-                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: C.text }}>{fmt(s.price)}</div>
-                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.changeRate >= 0 ? C.green : C.red }}>
-                  {s.changeRate >= 0 ? "▲" : "▼"} {Math.abs(s.changeRate).toFixed(2)}%
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: C.muted }}>{s.apiError ? "—" : fmt(s.price)}</div>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.apiError ? C.muted : s.changeRate >= 0 ? C.green : C.red }}>
+                  {s.apiError ? "—" : `${s.changeRate >= 0 ? "▲" : "▼"} ${Math.abs(s.changeRate).toFixed(2)}%`}
                 </div>
-                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted }}>{s.rsi}</div>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 600, color: s.apiError ? C.muted : s.rsi < 30 ? C.red : s.rsi < 40 ? C.yellow : C.muted }}>{s.apiError ? "—" : s.rsi}</div>
                 {/* 거래량 / 거래대금 */}
                 <div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: volOk ? C.text : C.red }}>
-                    {avgVol ? `${Math.round(avgVol / 10000)}만주` : "—"}
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 600, color: s.apiError ? C.muted : volOk ? C.text : C.red }}>
+                    {s.apiError ? "—" : avgVol ? `${Math.round(avgVol / 10000)}만주` : "—"}
                   </div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted }}>
-                    {avgTv ? fmtValue(avgTv) : "—"}
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>
+                    {s.apiError ? "" : avgTv ? fmtValue(avgTv) : "—"}
                   </div>
                 </div>
                 <div style={{ paddingRight: 8 }}>
-                  <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right,${C.green}30,${C.muted}15,${C.red}15)` }}>
-                    <div style={{ position: "absolute", left: `${Math.max(1, Math.min(99, s.env?.proximity ?? 50))}%`, top: -3, width: 10, height: 10, transform: "translateX(-50%)", borderRadius: "50%", background: scoreCol, border: `2px solid ${C.panel}` }} />
-                  </div>
-                  <div style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.muted, marginTop: 3 }}>
-                    {s.env ? `${s.env.distPct >= 0 ? "+" : ""}${s.env.distPct.toFixed(2)}%` : "—"}
-                  </div>
+                  {s.apiError ? <span style={{ fontSize: "0.769em", color: C.muted }}>—</span> : <>
+                    <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right,${C.green}30,${C.muted}15,${C.red}15)` }}>
+                      <div style={{ position: "absolute", left: `${Math.max(1, Math.min(99, s.env?.proximity ?? 50))}%`, top: -3, width: 10, height: 10, transform: "translateX(-50%)", borderRadius: "50%", background: scoreCol, border: `2px solid ${C.panel}` }} />
+                    </div>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, marginTop: 3 }}>
+                      {s.env ? `${s.env.distPct >= 0 ? "+" : ""}${s.env.distPct.toFixed(2)}%` : "—"}
+                    </div>
+                  </>}
                 </div>
                 <div>
-                  {lbl.color
-                    ? <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40` }}>{lbl.text}</span>
-                    : <span style={{ fontSize: 10, color: C.muted }}>{lbl.text}</span>}
+                  {s.apiError
+                    ? <span style={{ fontSize: "0.769em", padding: "2px 8px", borderRadius: 10, background: `${C.red}15`, color: C.red, border: `1px solid ${C.red}30` }}>조회실패</span>
+                    : lbl.color
+                      ? <span style={{ fontSize: "0.769em", padding: "2px 8px", borderRadius: 10, background: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40` }}>{lbl.text}</span>
+                      : <span style={{ fontSize: "0.769em", color: C.muted }}>{lbl.text}</span>}
                 </div>
               </div>
             );
@@ -1341,6 +1380,21 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
           {/* 아직 도착 안 한 행 — 스켈레톤 */}
           {loading && Array.from({ length: Math.max(0, YW_PICK_TICKERS.length - stocks.length) }).map((_, i) => (
             <SkeletonRow key={`skr-${i}`} />
+          ))}
+          {/* API 실패 종목 안내 행 */}
+          {!loading && apiFailedStocks.length > 0 && apiFailedStocks.map(s => (
+            <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "8px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: `${C.red}06`, opacity: 0.55 }}>
+              <div>
+                <div style={{ fontWeight: 600, color: C.muted }}>{s.name}</div>
+                <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}</div>
+              </div>
+              <div style={{ fontFamily: FONTS.mono, color: C.muted }}>—</div>
+              <div style={{ fontFamily: FONTS.mono, color: C.muted }}>—</div>
+              <div style={{ fontFamily: FONTS.mono, color: C.muted }}>—</div>
+              <div style={{ fontFamily: FONTS.mono, color: C.muted }}>—</div>
+              <div style={{ color: C.muted }}>—</div>
+              <span style={{ fontSize: "0.692em", color: C.red, background: `${C.red}15`, border: `1px solid ${C.red}30`, borderRadius: 3, padding: "2px 6px" }}>조회실패</span>
+            </div>
           ))}
         </div>
       )}
@@ -1351,7 +1405,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
         </div>
       )}
 
-      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 14px", display: "flex", gap: 8, fontSize: 11, color: C.muted }}>
+      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 14px", display: "flex", gap: 8, fontSize: "0.846em", color: C.muted }}>
         <span style={{ color: C.yellow }}>⚠</span>
         <span>엔벨로프 MA{envPeriod} ±{envKPct}% 기준 하한 근접 종목 자동 선별입니다. 하한 지지는 추세 하락 시 무의미할 수 있으므로 RSI·거래량을 병행 확인하세요. 투자 판단은 본인 책임입니다.</span>
       </div>
@@ -1370,15 +1424,16 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
   const [section, setSection] = useState("recommend");
 
   const SORT_FN = { score: (a, b) => b.score - a.score, volRate: (a, b) => b.volRate - a.volRate, changeRate: (a, b) => Math.abs(b.changeRate) - Math.abs(a.changeRate) };
-  const filtered = stocks.filter(s => filter === "전체" || s.signal === filter).sort(SORT_FN[sortBy]);
-  const surgeList = [...stocks].filter(s => s.changeRate >= 2).sort((a, b) => b.changeRate - a.changeRate);
+  const filtered = stocks.filter(s => !s.apiError && (filter === "전체" || s.signal === filter)).sort(SORT_FN[sortBy]);
+  const surgeList = [...stocks].filter(s => !s.apiError && s.changeRate >= 2).sort((a, b) => b.changeRate - a.changeRate);
   const dropList = [...stocks].filter(s => s.changeRate <= -2).sort((a, b) => a.changeRate - b.changeRate);
   const volList = [...stocks].sort((a, b) => b.volRate - a.volRate);
   const valueList = [...stocks].sort((a, b) => (b.tradingValue || 0) - (a.tradingValue || 0));
-  const summary = { total: stocks.length, strong: stocks.filter(s => s.signal === "강력매수").length, buy: stocks.filter(s => s.signal === "매수").length, other: stocks.filter(s => ["관망", "주의"].includes(s.signal)).length };
+  const okStocks = stocks.filter(s => !s.apiError);
+  const summary = { total: okStocks.length, strong: okStocks.filter(s => s.signal === "강력매수").length, buy: okStocks.filter(s => s.signal === "매수").length, other: okStocks.filter(s => ["관망", "주의"].includes(s.signal)).length, failed: stocks.filter(s => s.apiError).length };
 
   const btnStyle = (active, activeColor) => ({
-    padding: "5px 14px", borderRadius: 4, fontSize: 12, cursor: "pointer",
+    padding: "5px 14px", borderRadius: 4, fontSize: "0.923em", cursor: "pointer",
     border: `1px solid ${active ? activeColor : C.border}`,
     background: active ? `${activeColor}18` : "transparent",
     color: active ? activeColor : C.muted,
@@ -1388,14 +1443,14 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
   // 아직 한 번도 조회하지 않은 상태
   if (!loading && stocks.length === 0 && !error) {
     return (
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:80, gap:20 }} className="slide-in">
-        <div style={{ fontSize:40 }}>⚡</div>
-        <div style={{ fontFamily:FONTS.mono, fontSize:16, fontWeight:700, color:C.yellow }}>종가베팅</div>
-        <div style={{ fontSize:13, color:C.muted, textAlign:"center", lineHeight:1.7 }}>
-          RSI · 볼린저밴드 · 거래량을 복합 분석해 종가 매수 후보를 선별합니다.<br/>
-          <span style={{ fontFamily:FONTS.mono, color:C.muted, fontSize:11 }}>{WATCH_TICKERS.length}개 종목 스캔</span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 20 }} className="slide-in">
+        <div style={{ fontSize: "3.077em" }}>⚡</div>
+        <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.yellow }}>종가베팅</div>
+        <div style={{ fontSize: "1em", color: C.muted, textAlign: "center", lineHeight: 1.7 }}>
+          RSI · 볼린저밴드 · 거래량을 복합 분석해 종가 매수 후보를 선별합니다.<br />
+          <span style={{ fontFamily: FONTS.mono, color: C.muted, fontSize: "0.846em" }}>{WATCH_TICKERS.length}개 종목 스캔</span>
         </div>
-        <button onClick={onReload} style={{ padding:"10px 32px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", border:`1px solid ${C.yellow}`, background:`${C.yellow}18`, color:C.yellow, fontFamily:FONTS.mono }}>
+        <button onClick={onReload} style={{ padding: "10px 32px", borderRadius: 6, fontSize: "1em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>
           ⚡ 조회 시작
         </button>
       </div>
@@ -1422,10 +1477,10 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 11, color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
             {loading
-              ? <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.accent }}>{loadedCount} / {WATCH_TICKERS.length} 로드</span>
-              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: 11, cursor: "pointer", border: `1px solid ${C.accent}`, background: `${C.accent}15`, color: C.accent }}>
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{loadedCount} / {WATCH_TICKERS.length} 로드</span>
+              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.accent}`, background: `${C.accent}15`, color: C.accent }}>
                 🔄 새로고침
               </button>
             }
@@ -1438,7 +1493,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
       </div>
 
       {error && (
-        <div style={{ ...S.panel, background: `${C.red}10`, border: `1px solid ${C.red}40`, fontSize: 12, color: C.red }}>
+        <div style={{ ...S.panel, background: `${C.red}10`, border: `1px solid ${C.red}40`, fontSize: "0.923em", color: C.red }}>
           ⚠ {error} — Mock 데이터로 표시 중입니다. (CORS 제한 → Spring Boot 백엔드 프록시 권장)
         </div>
       )}
@@ -1452,7 +1507,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
               <button key={f} onClick={() => setFilter(f)} style={btnStyle(filter === f, C.yellow)}>{f}</button>
             ))}
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, color: C.muted }}>정렬</span>
+              <span style={{ fontSize: "0.846em", color: C.muted }}>정렬</span>
               {[["score", "점수순"], ["volRate", "거래량순"], ["changeRate", "등락률순"]].map(([k, l]) => (
                 <button key={k} onClick={() => setSortBy(k)} style={btnStyle(sortBy === k, C.accent)}>{l}</button>
               ))}
@@ -1511,7 +1566,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span>💰</span><span style={S.monoLabel}>거래대금 전체 순위</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {loading && <div className="spin" style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow }} />}
-                <span style={{ fontSize: 10, color: C.muted }}>거래대금 = 주가 × 거래량</span>
+                <span style={{ fontSize: "0.769em", color: C.muted }}>거래대금 = 주가 × 거래량</span>
               </div>
             </div>
             {/* 도착한 행 즉시 표시 */}
@@ -1524,7 +1579,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
         </div>
       )}
 
-      <div style={{ ...S.panel, display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: C.muted }}>
+      <div style={{ ...S.panel, display: "flex", alignItems: "center", gap: 8, fontSize: "0.846em", color: C.muted }}>
         <span style={{ color: C.yellow }}>⚠</span>
         <span>Yahoo Finance 일봉 기반 · RSI(14) · 볼린저밴드(20,2) · 거래량(20일 평균 대비) 복합 점수입니다. 실제 매매는 본인 판단하에 진행하세요.</span>
       </div>
@@ -1566,7 +1621,7 @@ function StrategyPanel({ strategy, rsiPeriod, rsiBuy, rsiSell, setRsiPeriod, set
         <InputField label="단기 이동평균" type="number" defaultValue={5} C={C} />
         <InputField label="장기 이동평균" type="number" defaultValue={20} C={C} />
       </div>
-      <div style={{ marginTop: 12, padding: 12, background: `${C.green}10`, border: `1px solid ${C.green}20`, borderRadius: 4, fontSize: 12, color: C.muted }}>
+      <div style={{ marginTop: 12, padding: 12, background: `${C.green}10`, border: `1px solid ${C.green}20`, borderRadius: 4, fontSize: "0.923em", color: C.muted }}>
         💡 단기선 상향 돌파 → 매수 (골든크로스) / 하향 돌파 → 매도 (데드크로스)
       </div>
     </div>
@@ -1603,6 +1658,10 @@ export default function StockDashboard() {
   const [isDark, setIsDark] = useState(true);
   const C = THEME[isDark ? "dark" : "light"];
   const S = makeS(C);
+  const [fontSize, setFontSize] = useState(13);
+  const incFont = () => setFontSize(v => Math.min(30, v + 1));
+  const decFont = () => setFontSize(v => Math.max(10, v - 1));
+  const resetFont = () => setFontSize(13);
 
   // ── State ─────────────────────────────────────────────
   const [tab, setTab] = useState("dashboard");
@@ -1631,12 +1690,12 @@ export default function StockDashboard() {
   const [prices, setPrices] = useState(MOCK_STOCKS.map(s => [s.price]));
 
   // ── 종가베팅 데이터 (탭 이동해도 유지) ─────────────────
-  const [closingStocks,      setClosingStocks]      = useState([]);
-  const [closingLoading,     setClosingLoading]     = useState(false);
+  const [closingStocks, setClosingStocks] = useState([]);
+  const [closingLoading, setClosingLoading] = useState(false);
   const [closingLoadedCount, setClosingLoadedCount] = useState(0);
-  const [closingError,       setClosingError]       = useState(null);
+  const [closingError, setClosingError] = useState(null);
   const [closingLastUpdated, setClosingLastUpdated] = useState(null);
-  const [closingFetched,     setClosingFetched]     = useState(false); // 최초 1회 플래그
+  const [closingFetched, setClosingFetched] = useState(false); // 최초 1회 플래그
 
   const loadClosingData = async () => {
     setClosingLoading(true);
@@ -1648,9 +1707,11 @@ export default function StockDashboard() {
       try {
         const d = await fetchYahooQuote(t.ticker);
         anyOk = true;
-        setClosingStocks(prev => [...prev, { ...d, ...t }]);
-      } catch (err) { console.warn(`${t.ticker} 실패:`, err); }
-      finally { setClosingLoadedCount(prev => prev + 1); }
+        setClosingStocks(prev => [...prev, { ...d, ...t, apiError: false }]);
+      } catch (err) {
+        console.warn(`${t.ticker} 실패:`, err);
+        setClosingStocks(prev => [...prev, { ...t, apiError: true }]);
+      } finally { setClosingLoadedCount(prev => prev + 1); }
       await delay(300);
     }
     if (!anyOk) { setClosingError("데이터를 불러올 수 없습니다"); setClosingStocks(MOCK_CLOSING); }
@@ -1660,12 +1721,12 @@ export default function StockDashboard() {
   };
 
   // ── YW's Pick 데이터 (탭 이동해도 유지) ─────────────────
-  const [ywStocks,      setYwStocks]      = useState([]);
-  const [ywLoading,     setYwLoading]     = useState(false);
+  const [ywStocks, setYwStocks] = useState([]);
+  const [ywLoading, setYwLoading] = useState(false);
   const [ywLoadedCount, setYwLoadedCount] = useState(0);
-  const [ywError,       setYwError]       = useState(null);
+  const [ywError, setYwError] = useState(null);
   const [ywLastUpdated, setYwLastUpdated] = useState(null);
-  const [ywFetched,     setYwFetched]     = useState(false); // 최초 1회 플래그
+  const [ywFetched, setYwFetched] = useState(false); // 최초 1회 플래그
 
   const loadYwData = async () => {
     setYwLoading(true);
@@ -1677,9 +1738,11 @@ export default function StockDashboard() {
       try {
         const d = await fetchYahooQuote(t.ticker);
         anyOk = true;
-        setYwStocks(prev => [...prev, { ...d, ...t }]);
-      } catch (err) { console.warn(`${t.ticker} 실패:`, err); }
-      finally { setYwLoadedCount(prev => prev + 1); }
+        setYwStocks(prev => [...prev, { ...d, ...t, apiError: false }]);
+      } catch (err) {
+        console.warn(`${t.ticker} 실패:`, err);
+        setYwStocks(prev => [...prev, { ...t, apiError: true }]);
+      } finally { setYwLoadedCount(prev => prev + 1); }
       await delay(300);
     }
     if (!anyOk) { setYwError("모든 종목 데이터를 불러올 수 없습니다"); setYwStocks(MOCK_YW_PICKS); }
@@ -1689,10 +1752,10 @@ export default function StockDashboard() {
   };
 
   // ── 시장 지수·환율 데이터 (탭 이동해도 유지) ─────────────
-  const [marketItems,       setMarketItems]       = useState(MARKET_ITEMS.map(m => ({ ...m, price: null, changeRate: null, closes: [] })));
-  const [marketLoading,     setMarketLoading]     = useState(false);
+  const [marketItems, setMarketItems] = useState(MARKET_ITEMS.map(m => ({ ...m, price: null, changeRate: null, closes: [] })));
+  const [marketLoading, setMarketLoading] = useState(false);
   const [marketLastUpdated, setMarketLastUpdated] = useState(null);
-  const [marketFetched,     setMarketFetched]     = useState(false); // 최초 1회 플래그
+  const [marketFetched, setMarketFetched] = useState(false); // 최초 1회 플래그
 
   const loadMarketData = async () => {
     setMarketLoading(true);
@@ -1726,11 +1789,11 @@ export default function StockDashboard() {
   const tabAccent = t => t === "closing" ? C.yellow : t === "yw-pick" ? C.yellow : C.accent;
 
   return (
-    <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text, fontSize: 13 }}>
+    <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text }}>
       <style>{makeCSS(C, isDark)}</style>
 
-      {/* ── 헤더 ── */}
-      <header style={{ background: C.header, borderBottom: `1px solid ${C.border}`, padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: isDark ? "none" : "0 1px 8px rgba(0,0,0,0.08)" }}>
+      {/* ── 헤더 — 폰트 고정 (fontSize 상속 제외) ── */}
+      <header style={{ background: C.header, borderBottom: `1px solid ${C.border}`, padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: isDark ? "none" : "0 1px 8px rgba(0,0,0,0.08)", fontSize: 13 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ fontFamily: FONTS.mono, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2 }}>
             ◈ <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span>
@@ -1741,8 +1804,8 @@ export default function StockDashboard() {
             <button key={t.id} onClick={() => {
               setTab(t.id);
               if (t.id === "dashboard" && !marketFetched && !marketLoading) loadMarketData();
-              if (t.id === "closing"   && !closingFetched && !closingLoading) loadClosingData();
-              if (t.id === "yw-pick"   && !ywFetched && !ywLoading) loadYwData();
+              if (t.id === "closing" && !closingFetched && !closingLoading) loadClosingData();
+              if (t.id === "yw-pick" && !ywFetched && !ywLoading) loadYwData();
             }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : C.muted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent" }}>
               {t.label}
             </button>
@@ -1761,251 +1824,268 @@ export default function StockDashboard() {
           </div>
           {/* 다크/라이트 토글 */}
           <ThemeToggle isDark={isDark} onToggle={() => setIsDark(v => !v)} C={C} />
+          {/* 폰트 크기 조절 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 2, border: `1px solid ${C.border}`, borderRadius: 4, overflow: "hidden" }}>
+            <button onClick={decFont} disabled={fontSize <= 10} style={{ padding: "3px 8px", background: "none", border: "none", cursor: fontSize <= 10 ? "not-allowed" : "pointer", color: fontSize <= 10 ? C.border : C.muted, fontFamily: FONTS.mono, fontSize: 14, lineHeight: 1, fontWeight: 700 }}>−</button>
+            <span style={{ fontFamily: FONTS.mono, fontSize: 10, color: C.muted, minWidth: 24, textAlign: "center" }}>{fontSize}</span>
+            <button onClick={incFont} disabled={fontSize >= 30} style={{ padding: "3px 8px", background: "none", border: "none", cursor: fontSize >= 30 ? "not-allowed" : "pointer", color: fontSize >= 30 ? C.border : C.muted, fontFamily: FONTS.mono, fontSize: 14, lineHeight: 1, fontWeight: 700 }}>+</button>
+            <div style={{ width: 1, height: 14, background: C.border }} />
+            <button onClick={resetFont} title="기본값(13)으로 초기화" style={{ padding: "3px 7px", background: "none", border: "none", cursor: fontSize === 13 ? "not-allowed" : "pointer", color: fontSize === 13 ? C.border : C.accent, lineHeight: 1, display: "flex", alignItems: "center" }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* ── 컨텐츠 ── */}
-      <main style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
+      {/* ── 컨텐츠 — fontSize state 상속 적용 ── */}
+      <div style={{ fontSize }}>
 
-        {/* ━━━ 대시보드 ━━━ */}
-        {tab === "dashboard" && (
-          <div style={{ display:"flex", flexDirection:"column", gap:14 }} className="slide-in">
+        {/* ── 컨텐츠 ── */}
+        <main style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
 
-            {/* ── 지수·환율 요약 바 ── */}
-            <MarketOverviewPanel C={C} items={marketItems} loading={marketLoading} lastUpdated={marketLastUpdated} onReload={loadMarketData} />
+          {/* ━━━ 대시보드 ━━━ */}
+          {tab === "dashboard" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
 
-            <div style={S.grid("320px 1fr")}>
-              {/* 관심종목 */}
-              <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
-                <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={S.monoLabel}>WATCHLIST</span>
-                  <span style={{ fontSize: 10, color: C.muted }}>실시간</span>
+              {/* ── 지수·환율 요약 바 ── */}
+              <MarketOverviewPanel C={C} items={marketItems} loading={marketLoading} lastUpdated={marketLastUpdated} onReload={loadMarketData} />
+
+              <div style={S.grid("320px 1fr")}>
+                {/* 관심종목 */}
+                <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+                  <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={S.monoLabel}>WATCHLIST</span>
+                    <span style={{ fontSize: "0.769em", color: C.muted }}>실시간</span>
+                  </div>
+                  {MOCK_STOCKS.map((s, i) => (
+                    <div key={s.code} onClick={() => setSelectedStock(s)} style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, cursor: "pointer", transition: "background 0.2s", background: selectedStock.code === s.code ? C.selected : "transparent", display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 500, fontSize: "1em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text }}>{s.name}</div>
+                        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.769em", color: C.muted }}>{s.code}</div>
+                      </div>
+                      <MiniChart data={prices[i]} color={s.change >= 0 ? C.green : C.red} />
+                      <div style={{ textAlign: "right", minWidth: 80 }}>
+                        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1em", color: C.text }}>{fmt(s.price)}</div>
+                        <ChangeText value={s.changeRate} C={C} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {MOCK_STOCKS.map((s, i) => (
-                  <div key={s.code} onClick={() => setSelectedStock(s)} style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, cursor: "pointer", transition: "background 0.2s", background: selectedStock.code === s.code ? C.selected : "transparent", display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 500, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text }}>{s.name}</div>
-                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 10, color: C.muted }}>{s.code}</div>
-                    </div>
-                    <MiniChart data={prices[i]} color={s.change >= 0 ? C.green : C.red} />
-                    <div style={{ textAlign: "right", minWidth: 80 }}>
-                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 13, color: C.text }}>{fmt(s.price)}</div>
-                      <ChangeText value={s.changeRate} C={C} />
-                    </div>
-                  </div>
-                ))}
-              </div>
 
-              {/* 차트 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ ...S.panel, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>
-                      {selectedStock.name} <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: C.muted }}>{selectedStock.code}</span>
+                {/* 차트 */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ ...S.panel, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: "1.385em", fontWeight: 700, color: C.text }}>
+                        {selectedStock.name} <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.923em", color: C.muted }}>{selectedStock.code}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
+                        <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.846em", color: selectedStock.change >= 0 ? C.green : C.red }}>{fmt(selectedStock.price)}</span>
+                        <ChangeText value={selectedStock.changeRate} C={C} />
+                      </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
-                      <span style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 24, color: selectedStock.change >= 0 ? C.green : C.red }}>{fmt(selectedStock.price)}</span>
-                      <ChangeText value={selectedStock.changeRate} C={C} />
+                    <div style={{ display: "flex", gap: 16 }}>
+                      {[["고가", selectedStock.high, C.green], ["저가", selectedStock.low, C.red], ["거래량", selectedStock.volume, C.yellow]].map(([label, val, col]) => (
+                        <div key={label} style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: "0.769em", color: C.muted }}>{label}</div>
+                          <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.923em", color: col }}>{typeof val === "number" && val > 100000 ? `${(val / 10000).toFixed(0)}만` : fmt(val)}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 16 }}>
-                    {[["고가", selectedStock.high, C.green], ["저가", selectedStock.low, C.red], ["거래량", selectedStock.volume, C.yellow]].map(([label, val, col]) => (
-                      <div key={label} style={{ textAlign: "center" }}>
-                        <div style={{ fontSize: 10, color: C.muted }}>{label}</div>
-                        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 12, color: col }}>{typeof val === "number" && val > 100000 ? `${(val / 10000).toFixed(0)}만` : fmt(val)}</div>
+
+                  <div style={{ ...S.panel, padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={S.monoLabel}>CANDLE · 1MIN</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {["1분", "5분", "1시간", "1일"].map(p => (
+                          <button key={p} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 3, color: C.muted, fontSize: "0.769em", padding: "2px 8px", cursor: "pointer", fontFamily: FONTS.mono }}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <CandleChart candles={CANDLE_DATA} C={C} />
+                  </div>
+
+                  {/* ── 시장 상세 지수 카드 ── */}
+                  <MarketDetailPanel C={C} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ━━━ 자동매매 ━━━ */}
+          {tab === "auto" && (
+            <div style={S.grid("280px 1fr")}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={S.panel}>
+                  <PanelHeader label="자동매매 제어" C={C} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                    <span style={{ fontSize: "1em", color: C.text }}>자동매매 활성화</span>
+                    <div onClick={() => setAutoEnabled(v => !v)} style={{ width: 44, height: 24, borderRadius: 12, cursor: "pointer", position: "relative", transition: "background 0.3s", background: autoEnabled ? C.green : C.border }}>
+                      <div style={{ position: "absolute", top: 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.3s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)", left: autoEnabled ? 22 : 2 }} />
+                    </div>
+                  </div>
+                  {autoEnabled && <div className="blink" style={{ fontSize: "0.846em", color: C.green, textAlign: "center", padding: 6, background: `${C.green}10`, borderRadius: 4, border: `1px solid ${C.green}30` }}>● 자동매매 실행 중</div>}
+                </div>
+                <div style={S.panel}>
+                  <PanelHeader label="전략 선택" C={C} />
+                  {AUTO_STRATEGIES.map(s => (
+                    <div key={s.id} onClick={() => setSelectedStrategy(s.id)} style={{ padding: "10px 12px", borderRadius: 4, marginBottom: 6, cursor: "pointer", transition: "all 0.2s", border: `1px solid ${selectedStrategy === s.id ? C.accent : C.border}`, background: selectedStrategy === s.id ? `${C.accent}12` : "transparent" }}>
+                      <div style={{ fontWeight: 500, color: selectedStrategy === s.id ? C.accent : C.text }}>{s.name}</div>
+                      <div style={{ fontSize: "0.846em", color: C.muted, marginTop: 2 }}>{s.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={S.panel}>
+                  <PanelHeader label="리스크 관리" C={C} />
+                  <SliderField label="손절 비율" value={stopLoss} min={1} max={20} onChange={setStopLoss} color={C.red} C={C} />
+                  <SliderField label="익절 비율" value={takeProfit} min={1} max={30} onChange={setTakeProfit} color={C.green} C={C} />
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <StrategyPanel strategy={selectedStrategy} rsiPeriod={rsiPeriod} rsiBuy={rsiBuy} rsiSell={rsiSell} setRsiPeriod={setRsiPeriod} setRsiBuy={setRsiBuy} setRsiSell={setRsiSell} C={C} />
+                <div style={S.panel}>
+                  <PanelHeader label="매매 대상 종목" C={C} />
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {MOCK_STOCKS.map(s => <div key={s.code} style={{ padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: "0.923em", cursor: "pointer", color: C.muted }}>{s.name}</div>)}
+                    <div style={{ padding: "4px 10px", border: `1px dashed ${C.accent}`, borderRadius: 20, fontSize: "0.923em", cursor: "pointer", color: C.accent }}>+ 추가</div>
+                  </div>
+                </div>
+                <div style={S.panel}>
+                  <PanelHeader label="전략 성과 (시뮬레이션)" C={C} />
+                  <div style={S.grid("repeat(4,1fr)")}>
+                    {[["총 수익률", "+12.4%", C.green], ["승률", "64%", C.accent], ["총 거래횟수", "128회", C.yellow], ["최대 낙폭", "-4.2%", C.red]].map(([label, val, col]) => (
+                      <div key={label} style={{ textAlign: "center", padding: 12, background: C.panelAlt, borderRadius: 4, border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>{label}</div>
+                        <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.231em", color: col }}>{val}</div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ ...S.panel, padding: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <span style={S.monoLabel}>CANDLE · 1MIN</span>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      {["1분", "5분", "1시간", "1일"].map(p => (
-                        <button key={p} style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 3, color: C.muted, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: FONTS.mono }}>{p}</button>
+                {/* 주문 유형 + 호가창 */}
+                <div style={{ ...S.panel, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <PanelHeader label="주문 유형" C={C} />
+                    <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                      {[["limit", "지정가"], ["market", "시장가"]].map(([val, label]) => (
+                        <button key={val} onClick={() => setOrderType(val)} style={{ flex: 1, padding: 6, cursor: "pointer", borderRadius: 4, fontSize: "0.923em", border: `1px solid ${orderType === val ? C.accent : C.border}`, background: orderType === val ? `${C.accent}20` : "transparent", color: orderType === val ? C.accent : C.muted }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                      <InputField label="수량" type="number" value={orderQty} onChange={e => setOrderQty(+e.target.value)} C={C} />
+                      <InputField label="가격" type="number" value={orderPrice} onChange={e => setOrderPrice(+e.target.value)} C={C} />
+                    </div>
+                    <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 10 }}>
+                      총 주문금액: <span style={{ color: C.yellow, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(orderQty * orderPrice)}원</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {[["buy", "매수", C.green], ["sell", "매도", C.red]].map(([side, label, col]) => (
+                        <button key={side} onClick={() => placeOrder(side)} style={{ flex: 1, padding: 10, cursor: "pointer", fontWeight: 700, fontSize: "1em", borderRadius: 4, background: `${col}20`, border: `1px solid ${col}`, color: col }}>{label}</button>
                       ))}
                     </div>
                   </div>
-                  <CandleChart candles={CANDLE_DATA} C={C} />
-                </div>
-
-                {/* ── 시장 상세 지수 카드 ── */}
-                <MarketDetailPanel C={C} />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ━━━ 자동매매 ━━━ */}
-        {tab === "auto" && (
-          <div style={S.grid("280px 1fr")}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={S.panel}>
-                <PanelHeader label="자동매매 제어" C={C} />
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <span style={{ fontSize: 13, color: C.text }}>자동매매 활성화</span>
-                  <div onClick={() => setAutoEnabled(v => !v)} style={{ width: 44, height: 24, borderRadius: 12, cursor: "pointer", position: "relative", transition: "background 0.3s", background: autoEnabled ? C.green : C.border }}>
-                    <div style={{ position: "absolute", top: 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.3s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)", left: autoEnabled ? 22 : 2 }} />
-                  </div>
-                </div>
-                {autoEnabled && <div className="blink" style={{ fontSize: 11, color: C.green, textAlign: "center", padding: 6, background: `${C.green}10`, borderRadius: 4, border: `1px solid ${C.green}30` }}>● 자동매매 실행 중</div>}
-              </div>
-              <div style={S.panel}>
-                <PanelHeader label="전략 선택" C={C} />
-                {AUTO_STRATEGIES.map(s => (
-                  <div key={s.id} onClick={() => setSelectedStrategy(s.id)} style={{ padding: "10px 12px", borderRadius: 4, marginBottom: 6, cursor: "pointer", transition: "all 0.2s", border: `1px solid ${selectedStrategy === s.id ? C.accent : C.border}`, background: selectedStrategy === s.id ? `${C.accent}12` : "transparent" }}>
-                    <div style={{ fontWeight: 500, color: selectedStrategy === s.id ? C.accent : C.text }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{s.desc}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={S.panel}>
-                <PanelHeader label="리스크 관리" C={C} />
-                <SliderField label="손절 비율" value={stopLoss} min={1} max={20} onChange={setStopLoss} color={C.red} C={C} />
-                <SliderField label="익절 비율" value={takeProfit} min={1} max={30} onChange={setTakeProfit} color={C.green} C={C} />
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <StrategyPanel strategy={selectedStrategy} rsiPeriod={rsiPeriod} rsiBuy={rsiBuy} rsiSell={rsiSell} setRsiPeriod={setRsiPeriod} setRsiBuy={setRsiBuy} setRsiSell={setRsiSell} C={C} />
-              <div style={S.panel}>
-                <PanelHeader label="매매 대상 종목" C={C} />
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {MOCK_STOCKS.map(s => <div key={s.code} style={{ padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: 12, cursor: "pointer", color: C.muted }}>{s.name}</div>)}
-                  <div style={{ padding: "4px 10px", border: `1px dashed ${C.accent}`, borderRadius: 20, fontSize: 12, cursor: "pointer", color: C.accent }}>+ 추가</div>
-                </div>
-              </div>
-              <div style={S.panel}>
-                <PanelHeader label="전략 성과 (시뮬레이션)" C={C} />
-                <div style={S.grid("repeat(4,1fr)")}>
-                  {[["총 수익률", "+12.4%", C.green], ["승률", "64%", C.accent], ["총 거래횟수", "128회", C.yellow], ["최대 낙폭", "-4.2%", C.red]].map(([label, val, col]) => (
-                    <div key={label} style={{ textAlign: "center", padding: 12, background: C.panelAlt, borderRadius: 4, border: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{label}</div>
-                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: 16, color: col }}>{val}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 주문 유형 + 호가창 */}
-              <div style={{ ...S.panel, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div>
-                  <PanelHeader label="주문 유형" C={C} />
-                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                    {[["limit", "지정가"], ["market", "시장가"]].map(([val, label]) => (
-                      <button key={val} onClick={() => setOrderType(val)} style={{ flex: 1, padding: 6, cursor: "pointer", borderRadius: 4, fontSize: 12, border: `1px solid ${orderType === val ? C.accent : C.border}`, background: orderType === val ? `${C.accent}20` : "transparent", color: orderType === val ? C.accent : C.muted }}>
-                        {label}
-                      </button>
+                  <div>
+                    <PanelHeader label="호가창" C={C} />
+                    {[...Array(5)].map((_, i) => (
+                      <div key={`ask-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.red}10`, marginBottom: 1, borderRadius: 2, fontSize: "0.846em" }}>
+                        <span style={{ color: C.red, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price + (5 - i) * 100)}</span>
+                        <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
+                      </div>
                     ))}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
-                    <InputField label="수량" type="number" value={orderQty} onChange={e => setOrderQty(+e.target.value)} C={C} />
-                    <InputField label="가격" type="number" value={orderPrice} onChange={e => setOrderPrice(+e.target.value)} C={C} />
-                  </div>
-                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
-                    총 주문금액: <span style={{ color: C.yellow, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(orderQty * orderPrice)}원</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {[["buy", "매수", C.green], ["sell", "매도", C.red]].map(([side, label, col]) => (
-                      <button key={side} onClick={() => placeOrder(side)} style={{ flex: 1, padding: 10, cursor: "pointer", fontWeight: 700, fontSize: 13, borderRadius: 4, background: `${col}20`, border: `1px solid ${col}`, color: col }}>{label}</button>
+                    <div style={{ height: 1, background: C.accent, margin: "4px 0", opacity: 0.4 }} />
+                    {[...Array(5)].map((_, i) => (
+                      <div key={`bid-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.green}10`, marginBottom: 1, borderRadius: 2, fontSize: "0.846em" }}>
+                        <span style={{ color: C.green, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price - i * 100)}</span>
+                        <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
-                <div>
-                  <PanelHeader label="호가창" C={C} />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`ask-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.red}10`, marginBottom: 1, borderRadius: 2, fontSize: 11 }}>
-                      <span style={{ color: C.red, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price + (5 - i) * 100)}</span>
-                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
-                    </div>
-                  ))}
-                  <div style={{ height: 1, background: C.accent, margin: "4px 0", opacity: 0.4 }} />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`bid-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.green}10`, marginBottom: 1, borderRadius: 2, fontSize: 11 }}>
-                      <span style={{ color: C.green, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price - i * 100)}</span>
-                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ━━━ 종가베팅 ━━━ */}
-        {tab === "closing" && <ClosingTab C={C} stocks={closingStocks} loading={closingLoading} loadedCount={closingLoadedCount} error={closingError} lastUpdated={closingLastUpdated} onReload={loadClosingData} />}
+          {/* ━━━ 종가베팅 ━━━ */}
+          {tab === "closing" && <ClosingTab C={C} stocks={closingStocks} loading={closingLoading} loadedCount={closingLoadedCount} error={closingError} lastUpdated={closingLastUpdated} onReload={loadClosingData} />}
 
-        {/* ━━━ YW's Pick ━━━ */}
-        {tab === "yw-pick" && <YwPickTab C={C} stocks={ywStocks} loading={ywLoading} loadedCount={ywLoadedCount} error={ywError} lastUpdated={ywLastUpdated} onReload={loadYwData} />}
+          {/* ━━━ YW's Pick ━━━ */}
+          {tab === "yw-pick" && <YwPickTab C={C} stocks={ywStocks} loading={ywLoading} loadedCount={ywLoadedCount} error={ywError} lastUpdated={ywLastUpdated} onReload={loadYwData} />}
 
-        {/* ━━━ 포트폴리오 ━━━ */}
-        {tab === "portfolio" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-in">
-            <div style={S.grid("repeat(4,1fr)")}>
-              <StatCard label="예수금" value="12,845,320" color={C.yellow} unit="원" C={C} />
-              <StatCard label="평가금액" value={fmt(totalEval)} color={C.accent} unit="원" C={C} />
-              <StatCard label="평가손익" value={fmt(totalProfit)} color={totalProfit >= 0 ? C.green : C.red} unit="원" C={C} />
-              <StatCard label="수익률" value="+3.2%" color={C.green} C={C} />
+          {/* ━━━ 포트폴리오 ━━━ */}
+          {tab === "portfolio" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-in">
+              <div style={S.grid("repeat(4,1fr)")}>
+                <StatCard label="예수금" value="12,845,320" color={C.yellow} unit="원" C={C} />
+                <StatCard label="평가금액" value={fmt(totalEval)} color={C.accent} unit="원" C={C} />
+                <StatCard label="평가손익" value={fmt(totalProfit)} color={totalProfit >= 0 ? C.green : C.red} unit="원" C={C} />
+                <StatCard label="수익률" value="+3.2%" color={C.green} C={C} />
+              </div>
+              <div style={S.panel}>
+                <PanelHeader label="보유 종목" C={C} />
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      {["종목명", "코드", "보유수량", "평균단가", "현재가", "평가손익", "수익률"].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: "right", fontSize: "0.846em", color: C.muted, fontWeight: 400, fontFamily: FONTS.mono, letterSpacing: 1 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {holdings.map(h => {
+                      const pl = (h.currentPrice - h.avgPrice) * h.qty;
+                      const plr = ((h.currentPrice - h.avgPrice) / h.avgPrice * 100).toFixed(2);
+                      const color = pl >= 0 ? C.green : C.red;
+                      return (
+                        <tr key={h.code} style={{ borderBottom: `1px solid ${C.border}20` }}>
+                          <td style={{ padding: 12, fontWeight: 500, color: C.text }}>{h.name}</td>
+                          <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.muted, fontSize: "0.846em" }}>{h.code}</td>
+                          <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.text }}>{h.qty}</td>
+                          <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.text }}>{fmt(h.avgPrice)}</td>
+                          <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.text }}>{fmt(h.currentPrice)}</td>
+                          <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color }}>{pl >= 0 ? "+" : ""}{fmt(pl)}</td>
+                          <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color }}>{+plr >= 0 ? "+" : ""}{plr}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div style={S.panel}>
-              <PanelHeader label="보유 종목" C={C} />
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                    {["종목명", "코드", "보유수량", "평균단가", "현재가", "평가손익", "수익률"].map(h => (
-                      <th key={h} style={{ padding: "8px 12px", textAlign: "right", fontSize: 11, color: C.muted, fontWeight: 400, fontFamily: FONTS.mono, letterSpacing: 1 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {holdings.map(h => {
-                    const pl = (h.currentPrice - h.avgPrice) * h.qty;
-                    const plr = ((h.currentPrice - h.avgPrice) / h.avgPrice * 100).toFixed(2);
-                    const color = pl >= 0 ? C.green : C.red;
-                    return (
-                      <tr key={h.code} style={{ borderBottom: `1px solid ${C.border}20` }}>
-                        <td style={{ padding: 12, fontWeight: 500, color: C.text }}>{h.name}</td>
-                        <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.muted, fontSize: 11 }}>{h.code}</td>
-                        <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.text }}>{h.qty}</td>
-                        <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.text }}>{fmt(h.avgPrice)}</td>
-                        <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color: C.text }}>{fmt(h.currentPrice)}</td>
-                        <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color }}>{pl >= 0 ? "+" : ""}{fmt(pl)}</td>
-                        <td style={{ padding: 12, textAlign: "right", fontFamily: FONTS.mono, color }}>{+plr >= 0 ? "+" : ""}{plr}%</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* ━━━ 로그 ━━━ */}
-        {tab === "log" && (
-          <div style={S.panel} className="slide-in">
-            <PanelHeader label="매매 로그" C={C} />
-            <div style={{ fontFamily: FONTS.mono, fontSize: 12, maxHeight: 500, overflowY: "auto" }}>
-              {logs.map((log, i) => {
-                const col = log.type === "buy" ? C.green : log.type === "sell" ? C.red : C.border;
-                return (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "6px 10px", marginBottom: 2, borderRadius: 3, background: log.type === "buy" ? `${C.green}10` : log.type === "sell" ? `${C.red}10` : C.panelAlt, borderLeft: `2px solid ${col}` }}>
-                    <span style={{ color: C.muted, minWidth: 70 }}>{log.time}</span>
-                    <span style={{ color: col, minWidth: 40 }}>[{log.type.toUpperCase()}]</span>
-                    <span style={{ color: C.text }}>{log.msg}</span>
-                  </div>
-                );
-              })}
+          {/* ━━━ 로그 ━━━ */}
+          {tab === "log" && (
+            <div style={S.panel} className="slide-in">
+              <PanelHeader label="매매 로그" C={C} />
+              <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", maxHeight: 500, overflowY: "auto" }}>
+                {logs.map((log, i) => {
+                  const col = log.type === "buy" ? C.green : log.type === "sell" ? C.red : C.border;
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "6px 10px", marginBottom: 2, borderRadius: 3, background: log.type === "buy" ? `${C.green}10` : log.type === "sell" ? `${C.red}10` : C.panelAlt, borderLeft: `2px solid ${col}` }}>
+                      <span style={{ color: C.muted, minWidth: 70 }}>{log.time}</span>
+                      <span style={{ color: col, minWidth: 40 }}>[{log.type.toUpperCase()}]</span>
+                      <span style={{ color: C.text }}>{log.msg}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
 
-      {/* ── 푸터 ── */}
-      <footer style={{ borderTop: `1px solid ${C.border}`, padding: "14px 20px", textAlign: "center" }}>
-        <span style={{ fontFamily: FONTS.mono, fontSize: 11, color: C.muted }}>
-          © 2026 <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span> Dashboard. Created by <span style={{ color: C.accent }}>조영욱</span>.
-        </span>
-      </footer>
+        {/* ── 푸터 ── */}
+        <footer style={{ borderTop: `1px solid ${C.border}`, padding: "14px 20px", textAlign: "center" }}>
+          <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>
+            © 2026 <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span> Dashboard. Created by <span style={{ color: C.accent }}>조영욱</span>.
+          </span>
+        </footer>
+      </div>{/* 컨텐츠 fontSize 래퍼 끝 */}
     </div>
   );
 }
