@@ -61,11 +61,12 @@ const FONTS = {
 
 const TABS = [
   { id: "dashboard", label: "대시보드" },
-  { id: "auto", label: "자동매매" },
+  { id: "theme", label: "🔥 주도/테마" },
   { id: "closing", label: "⚡ 종가베팅" },
   { id: "yw-pick", label: "⭐ YW's Pick" },
-  { id: "portfolio", label: "포트폴리오" },
-  { id: "log", label: "로그" },
+  { id: "auto", label: "자동매매", adminOnly: true },
+  { id: "portfolio", label: "포트폴리오", adminOnly: true },
+  { id: "log", label: "로그", adminOnly: true },
 ];
 
 const CLOSING_SECTIONS = [
@@ -1434,7 +1435,345 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
 }
 
 // ════════════════════════════════════════════════════════
-//  12. 종가베팅 탭
+//  12. 주도/테마 탭
+// ════════════════════════════════════════════════════════
+
+// 섹터 분류 매핑 (ticker → 섹터)
+const SECTOR_MAP = {
+  "005930": "반도체", "000660": "반도체", "042700": "반도체", "086520": "반도체",
+  "373220": "2차전지", "006400": "2차전지", "247540": "2차전지", "096770": "2차전지",
+  "207940": "바이오", "068270": "바이오", "326030": "바이오", "009830": "바이오",
+  "005380": "자동차", "012330": "자동차", "000270": "자동차", "011210": "자동차",
+  "105560": "금융", "055550": "금융", "086790": "금융", "138040": "금융",
+  "035420": "IT/플랫폼", "035720": "IT/플랫폼", "251270": "IT/플랫폼", "047050": "IT/플랫폼",
+  "000720": "건설", "047040": "건설", "028260": "건설", "000880": "건설",
+  "051910": "화학/소재", "010950": "화학/소재", "011790": "화학/소재", "002790": "화학/소재",
+  "015760": "에너지", "010140": "에너지", "267250": "에너지", "009540": "에너지",
+  "032830": "보험/증권", "030200": "보험/증권", "071050": "보험/증권", "039490": "보험/증권",
+};
+
+const SECTOR_COLORS = {
+  "반도체": "#38bdf8",
+  "2차전지": "#fbbf24",
+  "바이오": "#34d679",
+  "자동차": "#a78bfa",
+  "금융": "#fb923c",
+  "IT/플랫폼": "#22d3ee",
+  "건설": "#94a3b8",
+  "화학/소재": "#f472b6",
+  "에너지": "#f87171",
+  "보험/증권": "#818cf8",
+};
+
+// 스캔 대상 종목 (코드 + 이름)
+const THEME_TICKERS = [
+  { ticker: "005930.KS", code: "005930", name: "삼성전자" },
+  { ticker: "000660.KS", code: "000660", name: "SK하이닉스" },
+  { ticker: "042700.KS", code: "042700", name: "한미반도체" },
+  { ticker: "086520.KS", code: "086520", name: "에코프로" },
+  { ticker: "373220.KS", code: "373220", name: "LG에너지솔루션" },
+  { ticker: "006400.KS", code: "006400", name: "삼성SDI" },
+  { ticker: "247540.KS", code: "247540", name: "에코프로비엠" },
+  { ticker: "207940.KS", code: "207940", name: "삼성바이오로직스" },
+  { ticker: "068270.KS", code: "068270", name: "셀트리온" },
+  { ticker: "005380.KS", code: "005380", name: "현대차" },
+  { ticker: "012330.KS", code: "012330", name: "현대모비스" },
+  { ticker: "000270.KS", code: "000270", name: "기아" },
+  { ticker: "105560.KS", code: "105560", name: "KB금융" },
+  { ticker: "055550.KS", code: "055550", name: "신한지주" },
+  { ticker: "035420.KS", code: "035420", name: "NAVER" },
+  { ticker: "035720.KS", code: "035720", name: "카카오" },
+  { ticker: "051910.KS", code: "051910", name: "LG화학" },
+  { ticker: "010950.KS", code: "010950", name: "S-Oil" },
+  { ticker: "015760.KS", code: "015760", name: "한국전력" },
+  { ticker: "032830.KS", code: "032830", name: "삼성생명" },
+];
+
+const THEME_RENDER_URL = "https://trade-backend-3o2e.onrender.com";
+
+async function fetchThemeQuote(t) {
+  const res = await fetch(`${THEME_RENDER_URL}/api/yahoo?ticker=${t.ticker}`);
+  if (!res.ok) throw new Error("fetch fail");
+  const data = await res.json();
+  const chart = data.chart.result[0];
+  const meta = chart.meta;
+  const price = meta.regularMarketPrice;
+  const prevClose = meta.previousClose || meta.chartPreviousClose;
+  const changeRate = ((price - prevClose) / prevClose) * 100;
+  const volumes = chart.indicators.quote[0].volume.filter(Boolean);
+  const closes = chart.indicators.quote[0].close.filter(Boolean);
+  const vol20avg = volumes.slice(-20).reduce((a, b) => a + b, 0) / Math.min(20, volumes.length);
+  const volRate = Math.round((volumes[volumes.length - 1] / (vol20avg || 1)) * 100);
+  const tradingValue = Math.round(price * (volumes[volumes.length - 1] || 0));
+  const sector = SECTOR_MAP[t.code] || "기타";
+  return { ...t, price, prevClose, changeRate, volRate, tradingValue, closes, sector, apiError: false };
+}
+
+function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload }) {
+  const S = makeS(C);
+  const [view, setView] = useState("sector"); // "sector" | "rank" | "heatmap"
+
+  const ok = stocks.filter(s => !s.apiError);
+
+  // 섹터별 그룹핑
+  const sectors = {};
+  ok.forEach(s => {
+    if (!sectors[s.sector]) sectors[s.sector] = [];
+    sectors[s.sector].push(s);
+  });
+
+  // 섹터 평균 등락률
+  const sectorStats = Object.entries(sectors).map(([name, list]) => {
+    const avg = list.reduce((a, b) => a + b.changeRate, 0) / list.length;
+    const totalTv = list.reduce((a, b) => a + (b.tradingValue || 0), 0);
+    const leader = [...list].sort((a, b) => b.changeRate - a.changeRate)[0];
+    return { name, avg, totalTv, list, leader, color: SECTOR_COLORS[name] || C.muted };
+  }).sort((a, b) => b.avg - a.avg);
+
+  // 상승 TOP10
+  const topRise = [...ok].sort((a, b) => b.changeRate - a.changeRate).slice(0, 10);
+  // 거래대금 TOP10
+  const topValue = [...ok].sort((a, b) => b.tradingValue - a.tradingValue).slice(0, 10);
+
+  const notFetched = !loading && stocks.length === 0;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
+
+      {/* ── 헤더 배너 ── */}
+      <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontFamily: FONTS.mono, fontSize: "1.385em", fontWeight: 700, color: C.red, letterSpacing: 1, marginBottom: 4 }}>🔥 주도/테마 분석</div>
+            <div style={{ fontSize: "0.923em", color: C.muted }}>당일 섹터별 등락 · 주도주 · 거래대금 분석</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+            {loading
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.red }}>{loadedCount} / {THEME_TICKERS.length} 완료</span>
+              : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.red}`, background: `${C.red}15`, color: C.red }}>
+                🔄 재분석
+              </button>
+            }
+          </div>
+        </div>
+        {loading && <ProgressBar current={loadedCount} total={THEME_TICKERS.length} accentColor={C.red} C={C} />}
+      </div>
+
+      {/* ── 미조회 안내 ── */}
+      {notFetched && (
+        <div style={{ ...S.panel, textAlign: "center", padding: "48px 20px" }}>
+          <div style={{ fontSize: "2.5em", marginBottom: 12 }}>📊</div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: "1.077em", fontWeight: 700, color: C.text, marginBottom: 8 }}>주도/테마 분석</div>
+          <div style={{ fontSize: "0.923em", color: C.muted, marginBottom: 20, lineHeight: 1.7 }}>
+            당일 섹터별 자금 흐름과 주도주를 분석합니다.<br />
+            {THEME_TICKERS.length}개 종목 API 조회가 시작됩니다.
+          </div>
+          <button onClick={onReload} style={{ padding: "10px 28px", borderRadius: 6, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${C.red}`, background: `${C.red}15`, color: C.red, fontFamily: FONTS.mono, fontWeight: 700 }}>
+            🔥 분석 시작
+          </button>
+        </div>
+      )}
+
+      {/* ── 요약 카드 4개 ── */}
+      {ok.length > 0 && (
+        <div style={S.grid("repeat(4,1fr)")}>
+          {[
+            { label: "상승 섹터", value: sectorStats.filter(s => s.avg > 0).length + "개", color: C.green },
+            { label: "하락 섹터", value: sectorStats.filter(s => s.avg < 0).length + "개", color: C.red },
+            { label: "최강 섹터", value: sectorStats[0]?.name || "—", color: C.yellow },
+            { label: "최강 주도주", value: topRise[0]?.name || "—", color: C.accent },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ ...S.panel, textAlign: "center" }}>
+              <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 6, fontFamily: FONTS.mono }}>{label}</div>
+              <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.077em", color }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── 뷰 전환 탭 ── */}
+      {ok.length > 0 && (
+        <div style={{ display: "flex", gap: 6 }}>
+          {[["sector", "📊 섹터 분석"], ["rank", "🏆 주도주 랭킹"], ["heatmap", "🌡 테마 히트맵"]].map(([id, label]) => (
+            <button key={id} onClick={() => setView(id)} style={{ padding: "7px 16px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${view === id ? C.red : C.border}`, background: view === id ? `${C.red}18` : "transparent", color: view === id ? C.red : C.muted, fontWeight: view === id ? 700 : 400, transition: "all 0.2s" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ────────────── 📊 섹터 분석 뷰 ────────────── */}
+      {ok.length > 0 && view === "sector" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sectorStats.map(sec => (
+            <div key={sec.name} style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+              {/* 섹터 헤더 */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, background: `${sec.color}08` }}>
+                <div style={{ width: 3, height: 36, borderRadius: 2, background: sec.color, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: sec.color }}>{sec.name}</span>
+                    <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.077em", color: sec.avg >= 0 ? C.green : C.red }}>
+                      {sec.avg >= 0 ? "▲" : "▼"} {Math.abs(sec.avg).toFixed(2)}%
+                    </span>
+                    <span style={{ fontSize: "0.769em", color: C.muted }}>평균</span>
+                  </div>
+                  {/* 게이지 바 */}
+                  <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: "hidden", maxWidth: 200 }}>
+                    <div style={{ height: "100%", borderRadius: 2, background: sec.avg >= 0 ? C.green : C.red, width: `${Math.min(100, Math.abs(sec.avg) * 20)}%`, transition: "width 0.6s ease" }} />
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 2 }}>섹터 거래대금</div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.923em", color: C.yellow }}>{fmtValue(sec.totalTv)}</div>
+                </div>
+                <div style={{ textAlign: "right", minWidth: 80 }}>
+                  <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 2 }}>리더</div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.769em", color: C.text }}>{sec.leader?.name}</div>
+                </div>
+              </div>
+              {/* 종목 행 */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 1, background: C.border }}>
+                {sec.list.sort((a, b) => b.changeRate - a.changeRate).map(s => (
+                  <div key={s.code} style={{ padding: "8px 14px", background: C.panel, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "0.923em", color: C.text }}>{s.name}</div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{s.code}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.923em", color: s.changeRate >= 0 ? C.green : C.red }}>
+                        {s.changeRate >= 0 ? "▲" : "▼"}{Math.abs(s.changeRate).toFixed(2)}%
+                      </div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: s.volRate >= 200 ? C.yellow : C.muted }}>
+                        거래량비 {s.volRate}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ────────────── 🏆 주도주 랭킹 뷰 ────────────── */}
+      {ok.length > 0 && view === "rank" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {/* 상승률 TOP10 */}
+          <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>📈 상승률 TOP {topRise.length}</span>
+            </div>
+            {topRise.map((s, i) => (
+              <div key={s.code} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: `1px solid ${C.border}15`, background: i === 0 ? `${C.green}08` : "transparent" }}>
+                <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.923em", color: i < 3 ? C.yellow : C.muted, minWidth: 22 }}>#{i + 1}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.923em", color: C.text }}>{s.name}</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
+                    <span style={{ fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${(SECTOR_COLORS[s.sector] || C.muted)}20`, color: SECTOR_COLORS[s.sector] || C.muted, border: `1px solid ${(SECTOR_COLORS[s.sector] || C.muted)}40` }}>{s.sector}</span>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: s.volRate >= 200 ? C.yellow : C.muted }}>거래량비 {s.volRate}%</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: C.green }}>▲{s.changeRate.toFixed(2)}%</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{fmt(s.price)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 거래대금 TOP10 */}
+          <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>💰 거래대금 TOP {topValue.length}</span>
+            </div>
+            {topValue.map((s, i) => (
+              <div key={s.code} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderBottom: `1px solid ${C.border}15`, background: i === 0 ? `${C.yellow}08` : "transparent" }}>
+                <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.923em", color: i < 3 ? C.yellow : C.muted, minWidth: 22 }}>#{i + 1}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.923em", color: C.text }}>{s.name}</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
+                    <span style={{ fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${(SECTOR_COLORS[s.sector] || C.muted)}20`, color: SECTOR_COLORS[s.sector] || C.muted, border: `1px solid ${(SECTOR_COLORS[s.sector] || C.muted)}40` }}>{s.sector}</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: C.yellow }}>{fmtValue(s.tradingValue)}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: s.changeRate >= 0 ? C.green : C.red }}>{s.changeRate >= 0 ? "▲" : "▼"}{Math.abs(s.changeRate).toFixed(2)}%</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ────────────── 🌡 테마 히트맵 뷰 ────────────── */}
+      {ok.length > 0 && view === "heatmap" && (
+        <div style={{ ...S.panel }}>
+          <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 14 }}>🌡 섹터 히트맵 — 색상 강도 = 등락률</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8 }}>
+            {sectorStats.map(sec => {
+              const intensity = Math.min(0.9, Math.abs(sec.avg) / 5);
+              const bg = sec.avg >= 0
+                ? `rgba(52, 214, 121, ${0.1 + intensity * 0.5})`
+                : `rgba(248, 113, 113, ${0.1 + intensity * 0.5})`;
+              return (
+                <div key={sec.name} style={{ borderRadius: 8, padding: "14px 12px", background: bg, border: `1px solid ${sec.avg >= 0 ? C.green : C.red}30`, textAlign: "center", transition: "all 0.3s" }}>
+                  <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 4 }}>{sec.name}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 800, fontSize: "1.385em", color: sec.avg >= 0 ? C.green : C.red, marginBottom: 4 }}>
+                    {sec.avg >= 0 ? "+" : ""}{sec.avg.toFixed(2)}%
+                  </div>
+                  <div style={{ fontSize: "0.692em", color: C.muted }}>{sec.list.length}종목</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.yellow, marginTop: 4 }}>{fmtValue(sec.totalTv)}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 개별 종목 전체 히트맵 */}
+          <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, margin: "18px 0 10px" }}>개별 종목 히트맵</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 4 }}>
+            {[...ok].sort((a, b) => b.changeRate - a.changeRate).map(s => {
+              const intensity = Math.min(0.9, Math.abs(s.changeRate) / 5);
+              const bg = s.changeRate >= 0
+                ? `rgba(52, 214, 121, ${0.1 + intensity * 0.5})`
+                : `rgba(248, 113, 113, ${0.1 + intensity * 0.5})`;
+              return (
+                <div key={s.code} style={{ borderRadius: 6, padding: "8px 6px", background: bg, border: `1px solid ${s.changeRate >= 0 ? C.green : C.red}25`, textAlign: "center" }}>
+                  <div style={{ fontSize: "0.769em", fontWeight: 600, color: C.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.846em", color: s.changeRate >= 0 ? C.green : C.red }}>
+                    {s.changeRate >= 0 ? "+" : ""}{s.changeRate.toFixed(2)}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 로딩 스켈레톤 */}
+      {loading && stocks.length === 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} style={{ ...S.panel }}>
+              <div className="shimmer" style={{ height: 12, width: "60%", borderRadius: 4, marginBottom: 8 }} />
+              <div className="shimmer" style={{ height: 24, width: "80%", borderRadius: 4, marginBottom: 6 }} />
+              <div className="shimmer" style={{ height: 10, width: "40%", borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ ...S.panel, display: "flex", alignItems: "center", gap: 8, fontSize: "0.846em", color: C.muted }}>
+        <span style={{ color: C.yellow }}>⚠</span>
+        <span>Yahoo Finance 일봉 기준 · 전일 종가 대비 등락률입니다. 장중 실시간 데이터가 아닐 수 있으며, 투자 판단은 본인 책임입니다.</span>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  13. 종가베팅 탭
 // ════════════════════════════════════════════════════════
 
 function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onReload }) {
@@ -1780,6 +2119,32 @@ export default function StockDashboard() {
   const [ywLastUpdated, setYwLastUpdated] = useState(null);
   const [ywFetched, setYwFetched] = useState(false); // 최초 1회 플래그
 
+  // ── 주도/테마 데이터 ──────────────────────────────────
+  const [themeStocks, setThemeStocks] = useState([]);
+  const [themeLoading, setThemeLoading] = useState(false);
+  const [themeLoadedCount, setThemeLoadedCount] = useState(0);
+  const [themeLastUpdated, setThemeLastUpdated] = useState(null);
+  const [themeFetched, setThemeFetched] = useState(false);
+
+  const loadThemeData = async () => {
+    setThemeLoading(true);
+    setThemeStocks([]);
+    setThemeLoadedCount(0);
+    for (const t of THEME_TICKERS) {
+      try {
+        const d = await fetchThemeQuote(t);
+        setThemeStocks(prev => [...prev, d]);
+      } catch (err) {
+        console.warn(`${t.ticker} 실패:`, err);
+        setThemeStocks(prev => [...prev, { ...t, apiError: true, changeRate: 0, volRate: 0, tradingValue: 0, sector: SECTOR_MAP[t.code] || "기타" }]);
+      } finally { setThemeLoadedCount(prev => prev + 1); }
+      await delay(250);
+    }
+    setThemeLastUpdated(new Date());
+    setThemeLoading(false);
+    setThemeFetched(true);
+  };
+
   const loadYwData = async () => {
     setYwLoading(true);
     setYwError(null);
@@ -1849,7 +2214,11 @@ export default function StockDashboard() {
 
   const openAdminModal = () => { setAdminModalOpen(true); setAdminInput(""); setAdminError(""); };
   const closeAdminModal = () => { setAdminModalOpen(false); setAdminInput(""); setAdminError(""); };
-  const logoutAdmin = () => { setIsAdmin(false); };
+  const logoutAdmin = () => {
+    setIsAdmin(false);
+    const adminTabs = TABS.filter(t => t.adminOnly).map(t => t.id);
+    if (adminTabs.includes(tab)) setTab("dashboard");
+  };
 
   const submitAdmin = () => {
     if (adminInput === ADMIN_CODE) {
@@ -1884,7 +2253,7 @@ export default function StockDashboard() {
   const totalEval = holdings.reduce((s, h) => s + h.qty * h.currentPrice, 0);
   const totalProfit = holdings.reduce((s, h) => s + h.qty * (h.currentPrice - h.avgPrice), 0);
   const placeOrder = side => setLogs(prev => [{ time: fmtTime(new Date()), type: side, msg: `${selectedStock.name} ${orderQty}주 ${side === "buy" ? "매수" : "매도"} @ ${fmt(orderPrice)}` }, ...prev]);
-  const tabAccent = t => t === "closing" ? C.yellow : t === "yw-pick" ? C.yellow : C.accent;
+  const tabAccent = t => t === "closing" ? C.yellow : t === "yw-pick" ? C.yellow : t === "theme" ? C.red : C.accent;
 
   return (
     <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text }}>
@@ -1898,15 +2267,22 @@ export default function StockDashboard() {
             <span style={{ fontSize: 9, fontWeight: 400, color: C.muted, marginLeft: 6, letterSpacing: 0.5 }}>v{APP_VERSION}</span>
           </div>
           <div style={{ width: 1, height: 20, background: C.border }} />
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => {
-              setTab(t.id);
-              if (t.id === "dashboard" && !marketFetched && !marketLoading) loadMarketData();
-              if (t.id === "closing" && !closingFetched && !closingLoading) loadClosingData();
-              if (t.id === "yw-pick" && !ywFetched && !ywLoading) loadYwData();
-            }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : C.muted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent" }}>
-              {t.label}
-            </button>
+          {TABS.filter(t => !t.adminOnly || isAdmin).map((t, i, arr) => (
+            <>
+              {/* 관리자 전용 탭 시작 전 구분선 */}
+              {t.adminOnly && (i === 0 || !arr[i - 1].adminOnly) && (
+                <div key={`sep-${t.id}`} style={{ width: 1, height: 16, background: C.border, opacity: 0.5 }} />
+              )}
+              <button key={t.id} onClick={() => {
+                setTab(t.id);
+                if (t.id === "dashboard" && !marketFetched && !marketLoading) loadMarketData();
+                if (t.id === "closing" && !closingFetched && !closingLoading) loadClosingData();
+                if (t.id === "yw-pick" && !ywFetched && !ywLoading) loadYwData();
+                if (t.id === "theme" && !themeFetched && !themeLoading) loadThemeData();
+              }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : t.adminOnly ? C.accent : C.muted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent", opacity: t.adminOnly ? 0.85 : 1 }}>
+                {t.label}
+              </button>
+            </>
           ))}
         </div>
 
@@ -2114,6 +2490,9 @@ export default function StockDashboard() {
 
           {/* ━━━ YW's Pick ━━━ */}
           {tab === "yw-pick" && <YwPickTab C={C} stocks={ywStocks} loading={ywLoading} loadedCount={ywLoadedCount} error={ywError} lastUpdated={ywLastUpdated} onReload={loadYwData} />}
+
+          {/* ━━━ 주도/테마 ━━━ */}
+          {tab === "theme" && <ThemeTab C={C} stocks={themeStocks} loading={themeLoading} loadedCount={themeLoadedCount} lastUpdated={themeLastUpdated} onReload={loadThemeData} />}
 
           {/* ━━━ 포트폴리오 ━━━ */}
           {tab === "portfolio" && (
