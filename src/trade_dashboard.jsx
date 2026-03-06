@@ -1058,7 +1058,7 @@ function PickCard({ s, rank, C }) {
 
 function EnvelopeSettings({ period, kPct, setPeriod, setKPct, C }) {
   return (
-    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
+    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16, height: "100%", boxSizing: "border-box" }}>
       <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 14 }}>엔벨로프 파라미터</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
         <div>
@@ -1095,6 +1095,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
   const [envPeriod, setEnvPeriod] = useState(20);
   const [envKPct, setEnvKPct] = useState(4);
   const [filterLabel, setFilterLabel] = useState("전체");
+  const [filterPanelOpen, setFilterPanelOpen] = useState(true);
 
   // ── 거래량·거래대금 필터 ────────────────────────────────
   const [volPeriod, setVolPeriod] = useState(5);
@@ -1176,6 +1177,18 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
                 🔍 재스캔
               </button>
             }
+            {/* 필터 접기/펼치기 버튼 */}
+            <button
+              onClick={() => setFilterPanelOpen(v => !v)}
+              title={filterPanelOpen ? "필터 접기" : "필터 펼치기"}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.border}`, background: filterPanelOpen ? `${C.accent}12` : "transparent", color: filterPanelOpen ? C.accent : C.muted, fontFamily: FONTS.mono, transition: "all 0.2s" }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: filterPanelOpen ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s ease" }}>
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              {filterPanelOpen ? "필터 접기" : "필터 펼치기"}
+            </button>
           </div>
         </div>
 
@@ -1190,15 +1203,17 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
         {statItems.map(({ label, value, color }) => <StatCard key={label} label={label} value={value} color={color} C={C} />)}
       </div>
 
-      {/* 설정 + 필터 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 12, alignItems: "start" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* 설정 + 필터 — 접기/펼치기 */}
+      <div style={{ overflow: "hidden", maxHeight: filterPanelOpen ? 600 : 0, opacity: filterPanelOpen ? 1 : 0, transition: "max-height 0.35s ease, opacity 0.25s ease", marginBottom: filterPanelOpen ? 0 : -14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 180px", gap: 12, alignItems: "stretch" }}>
+
+          {/* ── 엔벨로프 파라미터 ── */}
           <EnvelopeSettings period={envPeriod} kPct={envKPct} setPeriod={setEnvPeriod} setKPct={setEnvKPct} C={C} />
 
           {/* ── 거래량·거래대금 필터 패널 ── */}
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
             {/* 헤더 + ON/OFF 토글 */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: volFilterOn ? 14 : 0 }}>
               <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>거래량·거래대금 필터</span>
               <div onClick={() => setVolFilterOn(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                 <span style={{ fontSize: "0.846em", color: volFilterOn ? C.green : C.muted }}>{volFilterOn ? "ON" : "OFF"}</span>
@@ -1208,103 +1223,96 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
               </div>
             </div>
 
-            <div style={{ opacity: volFilterOn ? 1 : 0.4, pointerEvents: volFilterOn ? "auto" : "none", display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* 기준 기간 선택 */}
-              <div>
-                <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>기준 기간</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {[["3", "최근 3일 평균"], ["5", "최근 5일 평균"]].map(([v, label]) => (
-                    <button key={v} onClick={() => setVolPeriod(+v)} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${volPeriod === +v ? C.accent : C.border}`, background: volPeriod === +v ? `${C.accent}18` : "transparent", color: volPeriod === +v ? C.accent : C.muted, fontWeight: volPeriod === +v ? 600 : 400 }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 기준 단위 선택 */}
-              <div>
-                <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>필터 기준</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {["만주", "억원"].map(unit => (
-                    <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 500); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
-                      거래{unit === "만주" ? "량" : "대금"} ({unit})
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 최솟값 슬라이더 */}
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ fontSize: "0.846em", color: C.muted }}>
-                    {minVolUnit === "만주" ? "최소 평균 거래량" : "최소 평균 거래대금"}
-                  </span>
-                  <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: C.accent }}>
-                    {minVolVal.toLocaleString()}{minVolUnit}
-                  </span>
-                </div>
-                {/* 거래량(만주): 슬라이더 / 거래대금(억원): 직접 입력 */}
-                {minVolUnit === "만주" ? (
-                  <input
-                    type="range"
-                    min={1} max={500} step={5}
-                    value={minVolVal}
-                    onChange={e => setMinVolVal(+e.target.value)}
-                    style={{ width: "100%" }}
-                  />
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <input
-                      type="number"
-                      min={1} step={10}
-                      value={minVolVal}
-                      onChange={e => setMinVolVal(Math.max(1, +e.target.value || 1))}
-                      style={{ flex: 1, padding: "5px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", outline: "none" }}
-                    />
-                    <span style={{ fontSize: "0.846em", color: C.muted, whiteSpace: "nowrap" }}>억원 이상</span>
+            {/* 접힘/펼침 영역 */}
+            <div style={{ overflow: "hidden", maxHeight: volFilterOn ? 400 : 0, opacity: volFilterOn ? 1 : 0, transition: "max-height 0.3s ease, opacity 0.2s ease" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* 기준 기간 선택 */}
+                <div>
+                  <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>기준 기간</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {[["3", "최근 3일 평균"], ["5", "최근 5일 평균"]].map(([v, label]) => (
+                      <button key={v} onClick={() => setVolPeriod(+v)} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${volPeriod === +v ? C.accent : C.border}`, background: volPeriod === +v ? `${C.accent}18` : "transparent", color: volPeriod === +v ? C.accent : C.muted, fontWeight: volPeriod === +v ? 600 : 400 }}>
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                )}
-                {/* 빠른 선택 프리셋 */}
-                <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
-                  {(minVolUnit === "만주"
-                    ? [[10, "10만주"], [50, "50만주"], [100, "100만주"], [200, "200만주"]]
-                    : [[10, "10억"], [50, "50억"], [100, "100억"], [500, "500억"], [1000, "1000억"], [3000, "3000억"], [5000, "5000억"]]
-                  ).map(([v, label]) => (
-                    <button key={v} onClick={() => setMinVolVal(v)} style={{ padding: "3px 10px", borderRadius: 20, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${minVolVal === v ? C.accent : C.border}`, background: minVolVal === v ? `${C.accent}15` : "transparent", color: minVolVal === v ? C.accent : C.muted }}>
-                      {label}
-                    </button>
-                  ))}
                 </div>
-              </div>
 
-              {/* 필터 적용 현황 */}
-              <div style={{ background: C.panelAlt, borderRadius: 4, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.846em", color: C.muted }}>
-                  {volPeriod}일 평균 {minVolUnit === "만주" ? "거래량" : "거래대금"} ≥ {minVolVal.toLocaleString()}{minVolUnit}
-                </span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", fontWeight: 700, color: C.green }}>
-                  {computed.filter(passVolFilter).length} / {computed.length} 통과
-                </span>
+                {/* 기준 단위 선택 */}
+                <div>
+                  <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>필터 기준</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {["만주", "억원"].map(unit => (
+                      <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 500); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
+                        거래{unit === "만주" ? "량" : "대금"} ({unit})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 최솟값 입력 */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: "0.846em", color: C.muted }}>
+                      {minVolUnit === "만주" ? "최소 평균 거래량" : "최소 평균 거래대금"}
+                    </span>
+                    <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1em", color: C.accent }}>
+                      {minVolVal.toLocaleString()}{minVolUnit}
+                    </span>
+                  </div>
+                  {minVolUnit === "만주" ? (
+                    <input type="range" min={1} max={500} step={5} value={minVolVal}
+                      onChange={e => setMinVolVal(+e.target.value)} style={{ width: "100%" }} />
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="number" min={1} step={10} value={minVolVal}
+                        onChange={e => setMinVolVal(Math.max(1, +e.target.value || 1))}
+                        style={{ flex: 1, padding: "5px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", outline: "none" }} />
+                      <span style={{ fontSize: "0.846em", color: C.muted, whiteSpace: "nowrap" }}>억원 이상</span>
+                    </div>
+                  )}
+                  {/* 빠른 선택 프리셋 */}
+                  <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
+                    {(minVolUnit === "만주"
+                      ? [[10, "10만주"], [50, "50만주"], [100, "100만주"], [200, "200만주"]]
+                      : [[10, "10억"], [50, "50억"], [100, "100억"], [500, "500억"], [1000, "1000억"], [3000, "3000억"], [5000, "5000억"]]
+                    ).map(([v, label]) => (
+                      <button key={v} onClick={() => setMinVolVal(v)} style={{ padding: "3px 10px", borderRadius: 20, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${minVolVal === v ? C.accent : C.border}`, background: minVolVal === v ? `${C.accent}15` : "transparent", color: minVolVal === v ? C.accent : C.muted }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 필터 적용 현황 */}
+                <div style={{ background: C.panelAlt, borderRadius: 4, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.846em", color: C.muted }}>
+                    {volPeriod}일 평균 {minVolUnit === "만주" ? "거래량" : "거래대금"} ≥ {minVolVal.toLocaleString()}{minVolUnit}
+                  </span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", fontWeight: 700, color: C.green }}>
+                    {computed.filter(passVolFilter).length} / {computed.length} 통과
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16 }}>
-          <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 10 }}>필터</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            {FILTER_LABELS.map(f => {
-              const lbl = pickLabel({ label: f });
-              const active = filterLabel === f;
-              const col = lbl.color || C.accent;
-              return (
-                <button key={f} onClick={() => setFilterLabel(f)} style={{ padding: "6px 12px", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", textAlign: "left", border: `1px solid ${active ? col : C.border}`, background: active ? `${col}15` : "transparent", color: active ? col : C.muted, fontWeight: active ? 600 : 400 }}>
-                  {f === "전체" ? "◈ 전체" : lbl.text}
-                </button>
-              );
-            })}
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 6, padding: 16, boxSizing: "border-box" }}>
+            <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 10 }}>필터</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {FILTER_LABELS.map(f => {
+                const lbl = pickLabel({ label: f });
+                const active = filterLabel === f;
+                const col = lbl.color || C.accent;
+                return (
+                  <button key={f} onClick={() => setFilterLabel(f)} style={{ padding: "6px 12px", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", textAlign: "left", border: `1px solid ${active ? col : C.border}`, background: active ? `${col}15` : "transparent", color: active ? col : C.muted, fontWeight: active ? 600 : 400 }}>
+                    {f === "전체" ? "◈ 전체" : lbl.text}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      </div>{/* 필터 접기/펼치기 래퍼 끝 */}
 
       {error && (
         <div style={{ background: `${C.red}10`, border: `1px solid ${C.red}40`, borderRadius: 6, padding: 12, fontSize: "0.923em", color: C.red }}>
@@ -1798,6 +1806,49 @@ export default function StockDashboard() {
   // 앱 최초 로드 시 대시보드 market 데이터 1회 자동 로드
   useEffect(() => { loadMarketData(); }, []);
 
+  // ── 관리자 모드 ───────────────────────────────────────────
+  // TODO: 보안코드는 추후 DB 연동 예정 — 현재는 상수로 관리
+  const ADMIN_CODE = "yw2026";
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminInput, setAdminInput] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminShake, setAdminShake] = useState(false);
+
+  const openAdminModal = () => { setAdminModalOpen(true); setAdminInput(""); setAdminError(""); };
+  const closeAdminModal = () => { setAdminModalOpen(false); setAdminInput(""); setAdminError(""); };
+  const logoutAdmin = () => { setIsAdmin(false); };
+
+  const submitAdmin = () => {
+    if (adminInput === ADMIN_CODE) {
+      setIsAdmin(true);
+      closeAdminModal();
+    } else {
+      setAdminError("보안코드가 올바르지 않습니다.");
+      setAdminShake(true);
+      setTimeout(() => setAdminShake(false), 500);
+    }
+  };
+
+  // 비관리자: 우클릭 · F12 · 개발자도구 단축키 차단
+  useEffect(() => {
+    const blockContext = e => { if (!isAdmin) e.preventDefault(); };
+    const blockKeys = e => {
+      if (isAdmin) return;
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key.toUpperCase())) ||
+        (e.ctrlKey && e.key.toUpperCase() === "U")
+      ) { e.preventDefault(); }
+    };
+    document.addEventListener("contextmenu", blockContext);
+    document.addEventListener("keydown", blockKeys);
+    return () => {
+      document.removeEventListener("contextmenu", blockContext);
+      document.removeEventListener("keydown", blockKeys);
+    };
+  }, [isAdmin]);
+
   const totalEval = holdings.reduce((s, h) => s + h.qty * h.currentPrice, 0);
   const totalProfit = holdings.reduce((s, h) => s + h.qty * (h.currentPrice - h.avgPrice), 0);
   const placeOrder = side => setLogs(prev => [{ time: fmtTime(new Date()), type: side, msg: `${selectedStock.name} ${orderQty}주 ${side === "buy" ? "매수" : "매도"} @ ${fmt(orderPrice)}` }, ...prev]);
@@ -2095,11 +2146,73 @@ export default function StockDashboard() {
         </main>
 
         {/* ── 푸터 ── */}
-        <footer style={{ borderTop: `1px solid ${C.border}`, padding: "14px 20px", textAlign: "center" }}>
+        <footer style={{ borderTop: `1px solid ${C.border}`, padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
           <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>
             © 2026 <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span> Dashboard. Created by <span style={{ color: C.accent }}>조영욱</span>.
           </span>
+          {/* 관리자 아이콘 — 우측 절대 위치 */}
+          <div style={{ position: "absolute", right: 16, bottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+            {isAdmin && (
+              <span style={{ fontFamily: FONTS.mono, fontSize: 9, color: C.green, background: `${C.green}18`, border: `1px solid ${C.green}35`, borderRadius: 3, padding: "2px 6px", letterSpacing: 1 }}>
+                ADMIN
+              </span>
+            )}
+            <button
+              onClick={isAdmin ? logoutAdmin : openAdminModal}
+              title={isAdmin ? "관리자 모드 해제" : "관리자 로그인"}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: isAdmin ? C.green : C.border, display: "flex", alignItems: "center", transition: "color 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.color = isAdmin ? C.red : C.muted}
+              onMouseLeave={e => e.currentTarget.style.color = isAdmin ? C.green : C.border}
+            >
+              {isAdmin ? (
+                /* 잠금 해제 아이콘 */
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                </svg>
+              ) : (
+                /* 자물쇠 아이콘 */
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              )}
+            </button>
+          </div>
         </footer>
+
+        {/* ── 관리자 보안코드 모달 ── */}
+        {adminModalOpen && (
+          <div onClick={closeAdminModal} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 10, padding: "28px 32px", width: 320, boxShadow: `0 8px 40px rgba(0,0,0,0.5)`, animation: adminShake ? "shake 0.4s ease" : "none" }}>
+              <style>{`@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }`}</style>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <span style={{ fontFamily: FONTS.mono, fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: 1 }}>관리자 인증</span>
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>보안코드를 입력하세요.</div>
+              <input
+                type="password"
+                value={adminInput}
+                onChange={e => { setAdminInput(e.target.value); setAdminError(""); }}
+                onKeyDown={e => e.key === "Enter" && submitAdmin()}
+                placeholder="보안코드"
+                autoFocus
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 5, border: `1px solid ${adminError ? C.red : C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 6 }}
+              />
+              {adminError && (
+                <div style={{ fontSize: 11, color: C.red, marginBottom: 10 }}>⚠ {adminError}</div>
+              )}
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={closeAdminModal} style={{ flex: 1, padding: "8px 0", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer", fontFamily: FONTS.mono }}>취소</button>
+                <button onClick={submitAdmin} style={{ flex: 1, padding: "8px 0", borderRadius: 5, border: `1px solid ${C.accent}`, background: `${C.accent}20`, color: C.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONTS.mono }}>확인</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>{/* 컨텐츠 fontSize 래퍼 끝 */}
     </div>
   );
