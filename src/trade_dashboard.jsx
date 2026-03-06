@@ -655,10 +655,10 @@ const CANDLE_DATA = generateCandles();
 const MARKET_ITEMS = [
   { id: "kospi", label: "KOSPI", ticker: "^KS11", type: "index", flag: "🇰🇷" },
   { id: "kosdaq", label: "KOSDAQ", ticker: "^KQ11", type: "index", flag: "🇰🇷" },
+  { id: "nasdaq", label: "NASDAQ", ticker: "^IXIC", type: "index", flag: "🇺🇸" },
   { id: "sp500", label: "S&P 500", ticker: "^GSPC", type: "index", flag: "🇺🇸" },
   { id: "usdkrw", label: "USD/KRW", ticker: "KRW=X", type: "fx", flag: "💱" },
   { id: "usdjpy", label: "USD/JPY", ticker: "JPY=X", type: "fx", flag: "🇯🇵" },
-  { id: "nasdaq", label: "NASDAQ", ticker: "^IXIC", type: "index", flag: "🇺🇸" },
 ];
 
 async function fetchMarketItem(item) {
@@ -696,30 +696,42 @@ function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
         {items.map(item => {
+          const isLoading = item.price === null && !item.apiError;
           const up = (item.changeRate ?? 0) >= 0;
-          const col = item.price === null ? C.muted : up ? C.green : C.red;
+          const col = item.apiError ? C.red : isLoading ? C.muted : up ? C.green : C.red;
           const isFx = item.type === "fx";
           return (
-            <div key={item.id} style={{ background: C.panelAlt, borderRadius: 6, padding: "10px 12px", borderLeft: `3px solid ${item.price === null ? C.border : col}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: "0.923em" }}>{item.flag}</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, fontWeight: 600 }}>{item.label}</span>
+            <div key={item.id} style={{ background: C.panelAlt, borderRadius: 6, padding: "10px 12px", borderLeft: `3px solid ${item.apiError ? C.red : isLoading ? C.border : col}`, opacity: item.apiError ? 0.7 : 1 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: "0.923em" }}>{item.flag}</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, fontWeight: 600 }}>{item.label}</span>
+                </div>
+                {item.apiError && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.615em", color: C.red, background: `${C.red}18`, border: `1px solid ${C.red}35`, borderRadius: 3, padding: "1px 4px", lineHeight: 1.4 }}>호출실패</span>
+                )}
               </div>
-              {item.price === null ? (
+              {/* 가격 */}
+              {isLoading ? (
                 <div className="shimmer" style={{ height: 18, width: "70%", borderRadius: 4, marginBottom: 4 }} />
+              ) : item.apiError ? (
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.154em", color: C.muted, marginBottom: 3 }}>—</div>
               ) : (
                 <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.154em", color: C.text, marginBottom: 3 }}>
                   {isFx ? item.price.toFixed(2) : item.price >= 1000 ? fmt(Math.round(item.price)) : item.price.toFixed(2)}
                 </div>
               )}
-              {item.changeRate === null ? (
+              {/* 등락 */}
+              {isLoading ? (
                 <div className="shimmer" style={{ height: 11, width: "50%", borderRadius: 4 }} />
+              ) : item.apiError ? (
+                <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.red }}>조회 불가</div>
               ) : (
                 <div style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 600, color: col }}>
                   {up ? "▲" : "▼"} {Math.abs(item.changeRate).toFixed(2)}%
                 </div>
               )}
-              {item.closes.length > 1 && (
+              {!item.apiError && item.closes?.length > 1 && (
                 <div style={{ marginTop: 6 }}>
                   <MiniChart data={item.closes} color={col} />
                 </div>
@@ -1087,7 +1099,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
   // ── 거래량·거래대금 필터 ────────────────────────────────
   const [volPeriod, setVolPeriod] = useState(5);
   const [minVolUnit, setMinVolUnit] = useState("만주");
-  const [minVolVal, setMinVolVal] = useState(50);
+  const [minVolVal, setMinVolVal] = useState(500);
   const [volFilterOn, setVolFilterOn] = useState(true);
 
   // envPeriod/kPct 변경 시 closes 원시 데이터로 재계산
@@ -1214,7 +1226,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
                 <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>필터 기준</div>
                 <div style={{ display: "flex", gap: 6 }}>
                   {["만주", "억원"].map(unit => (
-                    <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 30); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
+                    <button key={unit} onClick={() => { setMinVolUnit(unit); setMinVolVal(unit === "만주" ? 50 : 500); }} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${minVolUnit === unit ? C.yellow : C.border}`, background: minVolUnit === unit ? `${C.yellow}18` : "transparent", color: minVolUnit === unit ? C.yellow : C.muted, fontWeight: minVolUnit === unit ? 600 : 400 }}>
                       거래{unit === "만주" ? "량" : "대금"} ({unit})
                     </button>
                   ))}
@@ -1759,12 +1771,15 @@ export default function StockDashboard() {
 
   const loadMarketData = async () => {
     setMarketLoading(true);
-    setMarketItems(MARKET_ITEMS.map(m => ({ ...m, price: null, changeRate: null, closes: [] }))); // 리셋
+    setMarketItems(MARKET_ITEMS.map(m => ({ ...m, price: null, changeRate: null, closes: [], apiError: false }))); // 리셋
     for (const item of MARKET_ITEMS) {
       try {
         const d = await fetchMarketItem(item);
-        setMarketItems(prev => prev.map(p => p.id === item.id ? d : p));
-      } catch (e) { console.warn(`${item.ticker} 실패:`, e); }
+        setMarketItems(prev => prev.map(p => p.id === item.id ? { ...d, apiError: false } : p));
+      } catch (e) {
+        console.warn(`${item.ticker} 실패:`, e);
+        setMarketItems(prev => prev.map(p => p.id === item.id ? { ...p, apiError: true, price: null, changeRate: null } : p));
+      }
       await delay(200);
     }
     setMarketLastUpdated(new Date());
