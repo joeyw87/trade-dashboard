@@ -3,7 +3,7 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.5.2";
+const APP_VERSION  = "1.5.3";
 const APP_DATE     = "2026-03-07";
 
 // ════════════════════════════════════════════════════════
@@ -444,16 +444,15 @@ const makeCSS = (C, isDark) => `
   .mobile-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; }
   .mobile-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   @media (max-width: 600px) {
-    .mobile-tab-select { display: block !important; }
     .hide-mobile { display: none !important; }
+    .hamburger-btn { display: flex !important; }
+    .header-tabs   { display: none !important; }
     .stat-grid-4   { grid-template-columns: repeat(2, 1fr) !important; }
     .stat-grid-6   { grid-template-columns: repeat(2, 1fr) !important; }
     .market-grid   { grid-template-columns: repeat(2, 1fr) !important; }
     .stat-grid-3   { grid-template-columns: repeat(2, 1fr) !important; }
     .rank-grid-2   { grid-template-columns: 1fr !important; }
-    .stat-grid-3   { grid-template-columns: repeat(2, 1fr) !important; }
     .filter-grid   { grid-template-columns: 1fr !important; }
-    .header-tabs   { display: none !important; }
     .header-right  { gap: 6px !important; }
     .main-padding  { padding: 10px !important; }
   }
@@ -2430,6 +2429,7 @@ export default function StockDashboard() {
 
   // ── State ─────────────────────────────────────────────
   const [tab, setTab] = useState("menu_dashboard");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // ── 스캔 종목 리스트 (런타임 추가/삭제 가능) ─────────────
   const [watchTickers, setWatchTickers] = useState(WATCH_TICKERS);
@@ -2656,77 +2656,97 @@ export default function StockDashboard() {
     <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text, overflowX: "hidden", maxWidth: "100vw" }}>
       <style>{makeCSS(C, isDark)}</style>
 
-      {/* ── 헤더 — 폰트 고정 (fontSize 상속 제외) ── */}
-      <header style={{ background: C.header, borderBottom: `1px solid ${C.headerBorder}`, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 10px rgba(0,0,0,0.25)", fontSize: 13, flexWrap: "wrap", gap: 6 }}>
-        <div className="header-tabs" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontFamily: FONTS.header, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2 }}>
+      {/* ── 헤더 ── */}
+      <header style={{ background: C.header, borderBottom: `1px solid ${C.headerBorder}`, padding: "0 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.25)", fontSize: 13, position: "relative" }}>
+        {/* ── 헤더 메인 행 ── */}
+        <div style={{ display: "flex", alignItems: "center", height: 46, gap: 0 }}>
+
+          {/* 로고 */}
+          <div style={{ fontFamily: FONTS.header, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2, marginRight: 16, flexShrink: 0 }}>
             ◈ <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span>
             <span style={{ fontSize: 9, fontWeight: 400, color: C.headerMuted, marginLeft: 6, letterSpacing: 0.5 }}>v{APP_VERSION}</span>
           </div>
-          <div style={{ width: 1, height: 20, background: C.headerBorder }} />
-          {/* 모바일용 탭 select */}
-          <select
-            value={tab}
-            onChange={e => {
-              const id = e.target.value;
-              setTab(id);
-              if (id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
-              if (id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
-              if (id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
-              if (id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
-            }}
-            style={{ display: "none", padding: "5px 10px", borderRadius: 4, border: `1px solid ${C.headerBorder}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.header, fontSize: 12, cursor: "pointer" }}
-            className="mobile-tab-select"
-          >
-            {TABS.filter(t => !t.adminOnly || isAdmin).map(t => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
-          {TABS.filter(t => !t.adminOnly || isAdmin).map((t, i, arr) => (
-            <Fragment key={t.id}>
-              {/* 관리자 전용 탭 시작 전 구분선 */}
-              {t.adminOnly && (i === 0 || !arr[i - 1].adminOnly) && (
-                <div style={{ width: 1, height: 16, background: C.headerBorder, opacity: 0.5 }} />
-              )}
-              <button onClick={() => {
-                setTab(t.id);
-                if (t.id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
-                if (t.id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
-                if (t.id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
-                if (t.id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
-              }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: FONTS.header, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "4px 8px", color: tab === t.id ? tabAccent(t.id) : t.adminOnly ? C.accent : C.headerMuted, borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent", opacity: t.adminOnly ? 0.85 : 1 }}>
-                {t.label}
-              </button>
-            </Fragment>
-          ))}
-        </div>
 
-        <div className="header-right" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {/* 자동매매 상태 */}
-          <div className={autoEnabled ? "pulse" : ""} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div className={autoEnabled ? "blink" : ""} style={{ width: 6, height: 6, borderRadius: "50%", background: autoEnabled ? C.green : C.headerMuted }} />
-            <span style={{ fontFamily: FONTS.header, fontSize: 10, color: autoEnabled ? C.green : C.headerMuted }}>{autoEnabled ? "AUTO ON" : "AUTO OFF"}</span>
+          {/* PC 탭 — 로고 바로 옆, 왼쪽 정렬 */}
+          <div className="header-tabs" style={{ display: "flex", alignItems: "stretch", height: "100%", gap: 0 }}>
+            <div style={{ width: 1, background: C.headerBorder, margin: "8px 12px" }} />
+            {TABS.filter(t => !t.adminOnly || isAdmin).map((t, i, arr) => (
+              <Fragment key={t.id}>
+                {t.adminOnly && (i === 0 || !arr[i - 1].adminOnly) && (
+                  <div style={{ width: 1, background: C.headerBorder, opacity: 0.4, margin: "8px 8px" }} />
+                )}
+                <button onClick={() => {
+                  setTab(t.id);
+                  if (t.id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
+                  if (t.id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
+                  if (t.id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
+                  if (t.id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
+                }} style={{ background: "none", border: "none", borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent", borderTop: "2px solid transparent", cursor: "pointer", fontFamily: FONTS.header, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "0 10px", height: "100%", color: tab === t.id ? tabAccent(t.id) : t.adminOnly ? C.accent : C.headerMuted, opacity: t.adminOnly ? 0.85 : 1, whiteSpace: "nowrap" }}>
+                  {t.label}
+                </button>
+              </Fragment>
+            ))}
           </div>
-          <span style={{ fontFamily: FONTS.header, fontSize: 11, color: C.headerMuted }}>{fmtTime(time)}</span>
-          <div className="hide-mobile" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 4, padding: "4px 10px", fontSize: 11, color: C.yellow }}>
-            KRW 12,845,320
-          </div>
-          {/* 다크/라이트 토글 */}
-          <ThemeToggle isDark={isDark} onToggle={() => setIsDark(v => !v)} C={C} />
-          {/* 폰트 크기 조절 */}
-          <div style={{ display: "flex", alignItems: "center", gap: 2, border: `1px solid ${C.headerBorder}`, borderRadius: 4, overflow: "hidden" }}>
-            <button onClick={decFont} disabled={fontSize <= 10} style={{ padding: "3px 8px", background: "none", border: "none", cursor: fontSize <= 10 ? "not-allowed" : "pointer", color: fontSize <= 10 ? C.headerBorder : C.headerMuted, fontFamily: FONTS.header, fontSize: 14, lineHeight: 1, fontWeight: 700 }}>−</button>
-            <span style={{ fontFamily: FONTS.header, fontSize: 10, color: C.headerMuted, minWidth: 24, textAlign: "center" }}>{fontSize}</span>
-            <button onClick={incFont} disabled={fontSize >= 30} style={{ padding: "3px 8px", background: "none", border: "none", cursor: fontSize >= 30 ? "not-allowed" : "pointer", color: fontSize >= 30 ? C.headerBorder : C.headerMuted, fontFamily: FONTS.header, fontSize: 14, lineHeight: 1, fontWeight: 700 }}>+</button>
-            <div style={{ width: 1, height: 14, background: C.headerBorder }} />
-            <button onClick={resetFont} title="기본값(15)으로 초기화" style={{ padding: "3px 7px", background: "none", border: "none", cursor: fontSize === 15 ? "not-allowed" : "pointer", color: fontSize === 15 ? C.headerBorder : C.accent, lineHeight: 1, display: "flex", alignItems: "center" }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
+
+          {/* spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* 우측 컨트롤 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className={autoEnabled ? "pulse" : ""} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div className={autoEnabled ? "blink" : ""} style={{ width: 6, height: 6, borderRadius: "50%", background: autoEnabled ? C.green : C.headerMuted }} />
+              <span style={{ fontFamily: FONTS.header, fontSize: 10, color: autoEnabled ? C.green : C.headerMuted }}>{autoEnabled ? "AUTO ON" : "AUTO OFF"}</span>
+            </div>
+            <span style={{ fontFamily: FONTS.header, fontSize: 11, color: C.headerMuted }}>{fmtTime(time)}</span>
+            <div className="hide-mobile" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 4, padding: "4px 10px", fontSize: 11, color: C.yellow }}>
+              KRW 12,845,320
+            </div>
+            <ThemeToggle isDark={isDark} onToggle={() => setIsDark(v => !v)} C={C} />
+            {/* 폰트 크기 */}
+            <div className="hide-mobile" style={{ display: "flex", alignItems: "center", gap: 2, border: `1px solid ${C.headerBorder}`, borderRadius: 4, overflow: "hidden" }}>
+              <button onClick={decFont} disabled={fontSize <= 10} style={{ padding: "3px 8px", background: "none", border: "none", cursor: fontSize <= 10 ? "not-allowed" : "pointer", color: fontSize <= 10 ? C.headerBorder : C.headerMuted, fontFamily: FONTS.header, fontSize: 14, lineHeight: 1, fontWeight: 700 }}>−</button>
+              <span style={{ fontFamily: FONTS.header, fontSize: 10, color: C.headerMuted, minWidth: 24, textAlign: "center" }}>{fontSize}</span>
+              <button onClick={incFont} disabled={fontSize >= 30} style={{ padding: "3px 8px", background: "none", border: "none", cursor: fontSize >= 30 ? "not-allowed" : "pointer", color: fontSize >= 30 ? C.headerBorder : C.headerMuted, fontFamily: FONTS.header, fontSize: 14, lineHeight: 1, fontWeight: 700 }}>+</button>
+              <div style={{ width: 1, height: 14, background: C.headerBorder }} />
+              <button onClick={resetFont} title="기본값(15)으로 초기화" style={{ padding: "3px 7px", background: "none", border: "none", cursor: fontSize === 15 ? "not-allowed" : "pointer", color: fontSize === 15 ? C.headerBorder : C.accent, lineHeight: 1, display: "flex", alignItems: "center" }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+            </div>
+            {/* 햄버거 버튼 — 모바일 전용 */}
+            <button className="hamburger-btn" onClick={() => setMobileMenuOpen(v => !v)}
+              style={{ display: "none", background: "none", border: `1px solid ${C.headerBorder}`, borderRadius: 4, padding: "5px 7px", cursor: "pointer", flexDirection: "column", gap: 4, alignItems: "center", justifyContent: "center" }}>
+              <span style={{ display: "block", width: 18, height: 2, background: mobileMenuOpen ? C.accent : C.headerMuted, borderRadius: 1, transition: "transform 0.2s, opacity 0.2s", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }} />
+              <span style={{ display: "block", width: 18, height: 2, background: mobileMenuOpen ? C.accent : C.headerMuted, borderRadius: 1, transition: "opacity 0.2s", opacity: mobileMenuOpen ? 0 : 1 }} />
+              <span style={{ display: "block", width: 18, height: 2, background: mobileMenuOpen ? C.accent : C.headerMuted, borderRadius: 1, transition: "transform 0.2s, opacity 0.2s", transform: mobileMenuOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }} />
             </button>
           </div>
         </div>
+
+        {/* 모바일 드롭다운 메뉴 */}
+        {mobileMenuOpen && (
+          <div className="mobile-menu-drawer" style={{ position: "absolute", top: "100%", left: 0, right: 0, background: C.header, borderBottom: `1px solid ${C.headerBorder}`, zIndex: 200, boxShadow: "0 6px 20px rgba(0,0,0,0.3)" }}>
+            {TABS.filter(t => !t.adminOnly || isAdmin).map((t, i, arr) => (
+              <Fragment key={t.id}>
+                {t.adminOnly && (i === 0 || !arr[i - 1].adminOnly) && (
+                  <div style={{ height: 1, background: C.headerBorder, opacity: 0.4, margin: "0 16px" }} />
+                )}
+                <button onClick={() => {
+                  setTab(t.id);
+                  setMobileMenuOpen(false);
+                  if (t.id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
+                  if (t.id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
+                  if (t.id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
+                  if (t.id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
+                }} style={{ display: "flex", alignItems: "center", width: "100%", padding: "14px 20px", background: tab === t.id ? `${tabAccent(t.id)}12` : "none", border: "none", borderLeft: tab === t.id ? `3px solid ${tabAccent(t.id)}` : "3px solid transparent", cursor: "pointer", fontFamily: FONTS.header, fontSize: 13, letterSpacing: 1, color: tab === t.id ? tabAccent(t.id) : t.adminOnly ? C.accent : C.headerMuted, textAlign: "left" }}>
+                  {t.label}
+                </button>
+              </Fragment>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* ── 컨텐츠 — fontSize state 상속 적용 ── */}
