@@ -3,7 +3,7 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.5.1";
+const APP_VERSION  = "1.5.2";
 const APP_DATE     = "2026-03-07";
 
 // ════════════════════════════════════════════════════════
@@ -448,6 +448,7 @@ const makeCSS = (C, isDark) => `
     .hide-mobile { display: none !important; }
     .stat-grid-4   { grid-template-columns: repeat(2, 1fr) !important; }
     .stat-grid-6   { grid-template-columns: repeat(2, 1fr) !important; }
+    .market-grid   { grid-template-columns: repeat(2, 1fr) !important; }
     .stat-grid-3   { grid-template-columns: repeat(2, 1fr) !important; }
     .rank-grid-2   { grid-template-columns: 1fr !important; }
     .stat-grid-3   { grid-template-columns: repeat(2, 1fr) !important; }
@@ -587,13 +588,24 @@ function SkeletonRow() {
   );
 }
 
-function MiniChart({ data, color }) {
-  const W = 80, H = 28;
+function MiniChart({ data, color, width = 80, height = 36 }) {
+  const W = width, H = height;
   const min = Math.min(...data), max = Math.max(...data);
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / (max - min + 1)) * H}`).join(" ");
+  const range = max - min || 1;
+  const x = (i) => (i / (data.length - 1)) * W;
+  const y = (v) => H - ((v - min) / range) * (H - 4) - 2;
+  const pts = data.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+  const fillPts = `0,${H} ` + pts + ` ${W},${H}`;
   return (
-    <svg width={W} height={H} style={{ display: "block" }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={W} height={H} style={{ display: "block", width: "100%" }} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={`mg-${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <polygon points={fillPts} fill={`url(#mg-${color.replace("#","")})`} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -906,64 +918,86 @@ async function fetchMarketItem(item) {
 function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 20px" }}>
+      {/* ── 헤더 ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 2 }}>MARKET OVERVIEW</span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 3, height: 16, borderRadius: 2, background: C.accent }} />
+          <span style={{ fontFamily: FONTS.header, fontSize: "0.769em", fontWeight: 700, color: C.text, letterSpacing: 2 }}>MARKET OVERVIEW</span>
           {lastUpdated && !loading && (
-            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>
-          )}
-          {loading ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <div className="spin" style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px solid ${C.border}`, borderTopColor: C.accent }} />
-              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>로딩 중</span>
-            </div>
-          ) : (
-            <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontFamily: FONTS.mono }}>
-              🔄 새로고침
-            </button>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{fmtTime(lastUpdated)} 기준</span>
           )}
         </div>
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div className="spin" style={{ width: 10, height: 10, borderRadius: "50%", border: `1.5px solid ${C.border}`, borderTopColor: C.accent }} />
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>로딩 중</span>
+          </div>
+        ) : (
+          <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontFamily: FONTS.mono }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.color = C.accent; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
+            🔄 새로고침
+          </button>
+        )}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+
+      {/* ── 1줄 카드 그리드 ── */}
+      <div className="market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
         {items.map(item => {
           const isLoading = item.price === null && !item.apiError;
-          const up   = (item.changeRate ?? 0) >= 0;
-          const col  = item.apiError ? C.red : isLoading ? C.muted : up ? C.green : C.red;
+          const up  = (item.changeRate ?? 0) >= 0;
+          const col = item.apiError ? C.red : isLoading ? C.muted : up ? C.green : C.red;
           const isFx = item.type === "fx";
+          const diff = item.price && item.prevClose ? item.price - item.prevClose : null;
           return (
-            <div key={item.id} style={{ background: C.panelAlt, borderRadius: 6, padding: "10px 12px", borderLeft: `3px solid ${item.apiError ? C.red : isLoading ? C.border : col}`, opacity: item.apiError ? 0.7 : 1 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div key={item.id} style={{ background: C.panelAlt, borderRadius: 6, padding: "12px 14px", borderLeft: `3px solid ${item.apiError ? C.red : isLoading ? C.border : col}`, opacity: item.apiError ? 0.7 : 1, transition: "box-shadow 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = `0 2px 10px ${col}20`}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+
+              {/* 라벨 행 */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <span style={{ fontSize: "0.923em" }}>{item.flag}</span>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, fontWeight: 600 }}>{item.label}</span>
+                  <span style={{ fontFamily: FONTS.header, fontSize: "0.769em", color: C.muted, fontWeight: 700 }}>{item.label}</span>
                 </div>
                 {item.apiError && (
-                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.615em", color: C.red, background: `${C.red}18`, border: `1px solid ${C.red}35`, borderRadius: 3, padding: "1px 4px", lineHeight: 1.4 }}>호출실패</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.615em", color: C.red, background: `${C.red}18`, border: `1px solid ${C.red}35`, borderRadius: 3, padding: "1px 4px" }}>호출실패</span>
                 )}
               </div>
+
               {/* 가격 */}
               {isLoading ? (
-                <div className="shimmer" style={{ height: 18, width: "70%", borderRadius: 4, marginBottom: 4 }} />
+                <div className="shimmer" style={{ height: 22, width: "70%", borderRadius: 4, marginBottom: 5 }} />
               ) : item.apiError ? (
-                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.154em", color: C.muted, marginBottom: 3 }}>—</div>
+                <div style={{ fontFamily: FONTS.header, fontWeight: 700, fontSize: "1.308em", color: C.muted, marginBottom: 3 }}>—</div>
               ) : (
-                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.154em", color: C.text, marginBottom: 3 }}>
+                <div style={{ fontFamily: FONTS.header, fontWeight: 700, fontSize: "1.308em", color: C.text, marginBottom: 3, letterSpacing: -0.3 }}>
                   {isFx ? item.price.toFixed(2) : item.price >= 1000 ? fmt(Math.round(item.price)) : item.price.toFixed(2)}
                 </div>
               )}
-              {/* 등락 */}
+
+              {/* 등락 + 전일대비 */}
               {isLoading ? (
                 <div className="shimmer" style={{ height: 11, width: "50%", borderRadius: 4 }} />
               ) : item.apiError ? (
                 <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.red }}>조회 불가</div>
               ) : (
-                <div style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 600, color: col }}>
-                  {up ? "▲" : "▼"} {Math.abs(item.changeRate).toFixed(2)}%
+                <div style={{ display: "flex", alignItems: "baseline", gap: 5, flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 700, color: col }}>
+                    {up ? "▲" : "▼"} {Math.abs(item.changeRate ?? 0).toFixed(2)}%
+                  </span>
+                  {diff !== null && (
+                    <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>
+                      ({diff >= 0 ? "+" : ""}{isFx ? diff.toFixed(2) : fmt(Math.round(diff))})
+                    </span>
+                  )}
                 </div>
               )}
+
+              {/* 미니차트 */}
               {!item.apiError && item.closes?.length > 1 && (
-                <div style={{ marginTop: 6 }}>
-                  <MiniChart data={item.closes} color={col} />
+                <div style={{ marginTop: 8, height: 36 }}>
+                  <MiniChart data={item.closes} color={col} height={36} />
                 </div>
               )}
             </div>
@@ -2721,7 +2755,9 @@ export default function StockDashboard() {
                       <div style={{ fontWeight: 500, fontSize: "1em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: C.text }}>{s.name}</div>
                       <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "0.769em", color: C.muted }}>{s.code}</div>
                     </div>
-                    <MiniChart data={prices[i]} color={s.change >= 0 ? C.green : C.red} />
+                    <div style={{ flexShrink: 0, width: 80 }}>
+                      <MiniChart data={prices[i]} color={s.change >= 0 ? C.green : C.red} width={80} height={28} />
+                    </div>
                     <div style={{ textAlign: "right", minWidth: 80 }}>
                       <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1em", color: C.text }}>{fmt(s.price)}</div>
                       <ChangeText value={s.changeRate} C={C} />
