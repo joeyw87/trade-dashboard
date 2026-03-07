@@ -3,9 +3,8 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.4.1";
-const APP_DATE     = "2026-03-06";
-const APP_NOTES    = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
+const APP_VERSION  = "1.5.1";
+const APP_DATE     = "2026-03-07";
 
 // ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
@@ -71,7 +70,7 @@ const FONTS = {
 const TABS = [
   { id: "menu_dashboard", label: "대시보드" },
   { id: "menu_closing",   label: "⚡ 종가베팅" },
-  { id: "menu_yw-pick",   label: "⭐ YW's Pick" },
+  { id: "menu_yw-pick",   label: "⭐ 영욱문" },
   { id: "menu_theme",     label: "🔥 주도/테마" },
   { id: "menu_auto",      label: "자동매매",    adminOnly: true },
   { id: "menu_portfolio", label: "포트폴리오",  adminOnly: true },
@@ -441,6 +440,22 @@ const makeCSS = (C, isDark) => `
   input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; background:${C.accent}; border-radius:50%; cursor:pointer; }
   input[type=number], input[type=text] { background:${C.inputBg}; border:1px solid ${C.inputBorder}; color:${C.text}; padding:6px 10px; border-radius:4px; font-family:${FONTS.mono}; font-size:13px; width:100%; outline:none; }
   input[type=number]:focus, input[type=text]:focus { border-color:${C.accent}; }
+  html, body { overflow-x: hidden; max-width: 100vw; }
+  .mobile-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; }
+  .mobile-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media (max-width: 600px) {
+    .mobile-tab-select { display: block !important; }
+    .hide-mobile { display: none !important; }
+    .stat-grid-4   { grid-template-columns: repeat(2, 1fr) !important; }
+    .stat-grid-6   { grid-template-columns: repeat(2, 1fr) !important; }
+    .stat-grid-3   { grid-template-columns: repeat(2, 1fr) !important; }
+    .rank-grid-2   { grid-template-columns: 1fr !important; }
+    .stat-grid-3   { grid-template-columns: repeat(2, 1fr) !important; }
+    .filter-grid   { grid-template-columns: 1fr !important; }
+    .header-tabs   { display: none !important; }
+    .header-right  { gap: 6px !important; }
+    .main-padding  { padding: 10px !important; }
+  }
 `;
 
 const makeS = C => ({
@@ -909,7 +924,7 @@ function MarketOverviewPanel({ C, items, loading, lastUpdated, onReload }) {
           )}
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
         {items.map(item => {
           const isLoading = item.price === null && !item.apiError;
           const up   = (item.changeRate ?? 0) >= 0;
@@ -975,7 +990,7 @@ function MarketDetailPanel({ C }) {
   return (
     <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}>
       <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 2, marginBottom: 12 }}>KOSPI 업종별 등락</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 8 }}>
         {sectors.map(sec => {
           const up  = sec.change >= 0;
           const col = up ? C.green : C.red;
@@ -1377,7 +1392,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
     return (
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:80, gap:20 }} className="slide-in">
         <div style={{ fontSize: "3.077em" }}>⭐</div>
-        <div style={{ fontFamily:FONTS.mono, fontSize: "1.231em", fontWeight:700, color:C.yellow }}>YW's Pick</div>
+        <div style={{ fontFamily:FONTS.mono, fontSize: "1.231em", fontWeight:700, color:C.yellow }}>영욱문</div>
         <div style={{ fontSize: "1em", color:C.muted, textAlign:"center", lineHeight:1.7 }}>
           엔벨로프 하한 근접 종목을 스캔합니다.<br/>
           <span style={{ fontFamily:FONTS.mono, color:C.muted, fontSize: "0.846em" }}>{(ywPickTickers||[]).length}개 종목 · MA20 ±4%</span>
@@ -1396,7 +1411,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
       <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: loading ? 12 : 0 }}>
           <div>
-            <div style={{ fontFamily: FONTS.mono, fontSize: "1.385em", fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ YW's Pick</div>
+            <div style={{ fontFamily: FONTS.mono, fontSize: "1.385em", fontWeight: 700, color: C.yellow, letterSpacing: 1, marginBottom: 4 }}>⭐ 영욱문</div>
             <div style={{ fontSize: "0.923em", color: C.muted }}>엔벨로프 하한선 기준 · 지지구간 근접 종목 자동 선별</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1429,7 +1444,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
       </div>
 
       {/* 요약 카드 */}
-      <div style={S.grid("repeat(4,1fr)")}>
+      <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
         {statItems.map(({ label, value, color }) => (
           <StatCard key={label} label={label} value={value} color={color} C={C}
             onClick={label === "스캔 종목" ? () => setTickerModalOpen(true) : undefined}
@@ -1441,7 +1456,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
       {tickerModalOpen && (
         <TickerListModal
           tickers={ywPickTickers}
-          title={"⭐ YW's Pick 스캔 종목"}
+          title={"⭐ 영욱문 스캔 종목"}
           accentColor={C.yellow}
           C={C}
           onClose={() => setTickerModalOpen(false)}
@@ -1452,7 +1467,8 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
 
       {/* 설정 + 필터 — 접기/펼치기 */}
       <div style={{ overflow: "hidden", maxHeight: filterPanelOpen ? 600 : 0, opacity: filterPanelOpen ? 1 : 0, transition: "max-height 0.35s ease, opacity 0.25s ease", marginBottom: filterPanelOpen ? 0 : -14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 180px", gap: 12, alignItems: "stretch" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 200px", gap: 12, alignItems: "stretch" }}
+          className="filter-grid">
 
         {/* ── 엔벨로프 파라미터 ── */}
         <EnvelopeSettings period={envPeriod} kPct={envKPct} setPeriod={setEnvPeriod} setKPct={setEnvKPct} C={C} />
@@ -1589,7 +1605,8 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
               <div className="spin" style={{ marginLeft: "auto", width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.border}`, borderTopColor: C.yellow }} />
             )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
+          <div className="mobile-scroll-x">
+          <div style={{ minWidth: 620, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "6px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt }}>
             {["종목", "현재가", "등락률", "RSI", `${volPeriod}일 거래량`, "엔벨로프 위치", "상태"].map(h => (
               <span key={h} style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{h}</span>
             ))}
@@ -1603,7 +1620,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
             const avgTv = volPeriod === 3 ? s.tv3dAvg : s.tv5dAvg;
             const volOk = !volFilterOn || passVolFilter(s);
             return (
-              <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: s.apiError ? `${C.red}06` : i % 2 === 0 ? "transparent" : `${C.panelAlt}50`, opacity: s.apiError ? 0.55 : 1 }}>
+              <div key={s.ticker} className="fade-in" style={{ minWidth: 620, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "10px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: s.apiError ? `${C.red}06` : i % 2 === 0 ? "transparent" : `${C.panelAlt}50`, opacity: s.apiError ? 0.55 : 1 }}>
                 <div>
                   <div style={{ fontWeight: 600, color: s.apiError ? C.muted : C.text }}>{s.name}</div>
                   <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}
@@ -1650,7 +1667,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
           ))}
           {/* API 실패 종목 안내 행 */}
           {!loading && apiFailedStocks.length > 0 && apiFailedStocks.map(s => (
-            <div key={s.ticker} className="fade-in" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "8px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: `${C.red}06`, opacity: 0.55 }}>
+            <div key={s.ticker} className="fade-in" style={{ minWidth: 620, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 2fr 1fr", padding: "8px 16px", borderBottom: `1px solid ${C.border}20`, alignItems: "center", background: `${C.red}06`, opacity: 0.55 }}>
               <div>
                 <div style={{ fontWeight: 600, color: C.muted }}>{s.name}</div>
                 <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{s.ticker}</div>
@@ -1663,6 +1680,7 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
               <span style={{ fontSize: "0.692em", color: C.red, background: `${C.red}15`, border: `1px solid ${C.red}30`, borderRadius: 3, padding: "2px 6px" }}>조회실패</span>
             </div>
           ))}
+          </div>{/* mobile-scroll-x 닫기 */}
         </div>
       )}
 
@@ -1868,7 +1886,7 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
 
       {/* ── 요약 카드 4개 ── */}
       {ok.length > 0 && (
-        <div style={S.grid("repeat(4,1fr)")}>
+        <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
           {[
             { label: "상승 섹터", value: sectorStats.filter(s=>s.avg>0).length + "개", color: C.green },
             { label: "하락 섹터", value: sectorStats.filter(s=>s.avg<0).length + "개", color: C.red },
@@ -1953,7 +1971,7 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
 
       {/* ────────────── 🏆 주도주 랭킹 뷰 ────────────── */}
       {ok.length > 0 && view === "rank" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }} className="rank-grid-2">
           {/* 상승률 TOP10 */}
           <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
             <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
@@ -2119,7 +2137,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-in">
 
       {/* 요약 — 도착하는 즉시 카운트 올라감 */}
-      <div style={S.grid("repeat(4,1fr)")}>
+      <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
         <StatCard label="스캔 종목" value={`${summary.total}개`} color={C.accent} C={C} onClick={() => setTickerModalOpen(true)} />
         <StatCard label="강력매수" value={`${summary.strong}개`} color={C.green} C={C} />
         <StatCard label="매수 신호" value={`${summary.buy}개`} color={C.yellow} C={C} />
@@ -2222,7 +2240,7 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
       {section === "value" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* TOP3 메달 — 3개 도착할 때까지 스켈레톤 혼합 */}
-          <div style={S.grid("repeat(3,1fr)")}>
+          <div className="stat-grid-3" style={S.grid("repeat(3,1fr)")}>
             {valueList.slice(0, 3).map((s, i) => <MedalCard key={s.ticker} s={s} rank={i} C={C} />)}
             {loading && Array.from({ length: Math.max(0, 3 - valueList.length) }).map((_, i) => (
               <div key={`msk-${i}`} style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
@@ -2340,6 +2358,16 @@ export default function StockDashboard() {
   const [coldStartVisible,  setColdStartVisible]  = useState(false);
   const [coldStartDone,     setColdStartDone]     = useState(false);
   const [coldStartElapsed,  setColdStartElapsed]  = useState(0);
+
+  // viewport 메타태그 주입 (모바일 대응)
+  useEffect(() => {
+    if (!document.querySelector('meta[name="viewport"]')) {
+      const m = document.createElement('meta');
+      m.name = 'viewport';
+      m.content = 'width=device-width, initial-scale=1, maximum-scale=1';
+      document.head.appendChild(m);
+    }
+  }, []);
 
   useEffect(() => {
     let timer = null;
@@ -2591,17 +2619,35 @@ export default function StockDashboard() {
   const tabAccent = t => t === "menu_closing" ? C.yellow : t === "menu_yw-pick" ? C.yellow : t === "menu_theme" ? C.red : C.accent;
 
   return (
-    <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text }}>
+    <div className="theme-transition" style={{ fontFamily: FONTS.sans, background: C.bg, minHeight: "100vh", color: C.text, overflowX: "hidden", maxWidth: "100vw" }}>
       <style>{makeCSS(C, isDark)}</style>
 
       {/* ── 헤더 — 폰트 고정 (fontSize 상속 제외) ── */}
-      <header style={{ background: C.header, borderBottom: `1px solid ${C.headerBorder}`, padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 10px rgba(0,0,0,0.25)", fontSize: 13 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <header style={{ background: C.header, borderBottom: `1px solid ${C.headerBorder}`, padding: "8px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 2px 10px rgba(0,0,0,0.25)", fontSize: 13, flexWrap: "wrap", gap: 6 }}>
+        <div className="header-tabs" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ fontFamily: FONTS.header, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2 }}>
             ◈ <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span>
             <span style={{ fontSize: 9, fontWeight: 400, color: C.headerMuted, marginLeft: 6, letterSpacing: 0.5 }}>v{APP_VERSION}</span>
           </div>
           <div style={{ width: 1, height: 20, background: C.headerBorder }} />
+          {/* 모바일용 탭 select */}
+          <select
+            value={tab}
+            onChange={e => {
+              const id = e.target.value;
+              setTab(id);
+              if (id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
+              if (id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
+              if (id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
+              if (id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
+            }}
+            style={{ display: "none", padding: "5px 10px", borderRadius: 4, border: `1px solid ${C.headerBorder}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.header, fontSize: 12, cursor: "pointer" }}
+            className="mobile-tab-select"
+          >
+            {TABS.filter(t => !t.adminOnly || isAdmin).map(t => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
           {TABS.filter(t => !t.adminOnly || isAdmin).map((t, i, arr) => (
             <Fragment key={t.id}>
               {/* 관리자 전용 탭 시작 전 구분선 */}
@@ -2621,14 +2667,14 @@ export default function StockDashboard() {
           ))}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="header-right" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {/* 자동매매 상태 */}
           <div className={autoEnabled ? "pulse" : ""} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div className={autoEnabled ? "blink" : ""} style={{ width: 6, height: 6, borderRadius: "50%", background: autoEnabled ? C.green : C.headerMuted }} />
             <span style={{ fontFamily: FONTS.header, fontSize: 10, color: autoEnabled ? C.green : C.headerMuted }}>{autoEnabled ? "AUTO ON" : "AUTO OFF"}</span>
           </div>
           <span style={{ fontFamily: FONTS.header, fontSize: 11, color: C.headerMuted }}>{fmtTime(time)}</span>
-          <div style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 4, padding: "4px 10px", fontSize: 11, color: C.yellow }}>
+          <div className="hide-mobile" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 4, padding: "4px 10px", fontSize: 11, color: C.yellow }}>
             KRW 12,845,320
           </div>
           {/* 다크/라이트 토글 */}
@@ -2653,7 +2699,7 @@ export default function StockDashboard() {
       <div style={{ fontSize }}>
 
       {/* ── 컨텐츠 ── */}
-      <main style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
+      <main className="main-padding" style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
 
         {/* ━━━ 대시보드 ━━━ */}
         {tab === "menu_dashboard" && (
@@ -2765,7 +2811,7 @@ export default function StockDashboard() {
               </div>
               <div style={S.panel}>
                 <PanelHeader label="전략 성과 (시뮬레이션)" C={C} />
-                <div style={S.grid("repeat(4,1fr)")}>
+                <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
                   {[["총 수익률", "+12.4%", C.green], ["승률", "64%", C.accent], ["총 거래횟수", "128회", C.yellow], ["최대 낙폭", "-4.2%", C.red]].map(([label, val, col]) => (
                     <div key={label} style={{ textAlign: "center", padding: 12, background: C.panelAlt, borderRadius: 4, border: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>{label}</div>
@@ -2832,7 +2878,7 @@ export default function StockDashboard() {
         {/* ━━━ 포트폴리오 ━━━ */}
         {tab === "menu_portfolio" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="slide-in">
-            <div style={S.grid("repeat(4,1fr)")}>
+            <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
               <StatCard label="예수금" value="12,845,320" color={C.yellow} unit="원" C={C} />
               <StatCard label="평가금액" value={fmt(totalEval)} color={C.accent} unit="원" C={C} />
               <StatCard label="평가손익" value={fmt(totalProfit)} color={totalProfit >= 0 ? C.green : C.red} unit="원" C={C} />
@@ -2932,7 +2978,7 @@ export default function StockDashboard() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9998 }}>
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 12, padding: "32px 36px", width: 360, boxShadow: "0 12px 48px rgba(0,0,0,0.6)", textAlign: "center" }}>
             {/* 아이콘 — 잠자는 서버 */}
-            <div style={{ fontSize: "2.5em", marginBottom: 14 }}>🌙</div>
+            <div style={{ fontSize: "2.5em", marginBottom: 14 }}>⭐</div>
             <div style={{ fontFamily: FONTS.mono, fontSize: "1.077em", fontWeight: 700, color: C.text, marginBottom: 10, letterSpacing: 0.5 }}>
               서버 기동 중...
             </div>
