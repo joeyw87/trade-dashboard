@@ -3,9 +3,8 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.4.0";
-const APP_DATE     = "2025-03-06";
-const APP_NOTES    = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
+const APP_VERSION  = "1.5.7";
+const APP_DATE     = "2026-03-07";
 
 // ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
@@ -1959,11 +1958,12 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
                 {COLS.map(col => (
                   <div key={col.key}
                     onClick={() => col.sortable && toggleSort(col.key)}
+                    title={col.sortable ? (kisSort.key === col.key ? (kisSort.dir === -1 ? "오름차순으로 변경" : "기본 순서로 복귀") : "내림차순 정렬") : ""}
                     style={{ display: "flex", alignItems: "center", gap: 3, cursor: col.sortable ? "pointer" : "default", userSelect: "none" }}>
                     <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: kisSort.key === col.key ? C.accent : C.muted, letterSpacing: 0.5, fontWeight: kisSort.key === col.key ? 700 : 400 }}>{col.label}</span>
                     {col.sortable && (
-                      <span style={{ fontSize: "0.6em", color: kisSort.key === col.key ? C.accent : C.border, lineHeight: 1 }}>
-                        {kisSort.key === col.key ? (kisSort.dir === -1 ? "▼" : "▲") : "⇅"}
+                      <span style={{ fontSize: "0.6em", lineHeight: 1, color: kisSort.key === col.key ? C.accent : C.border }}>
+                        {kisSort.key !== col.key ? "⇅" : kisSort.dir === -1 ? "▼" : "▲"}
                       </span>
                     )}
                   </div>
@@ -2740,7 +2740,7 @@ export default function StockDashboard() {
       <header style={{ background: C.header, borderBottom: `1px solid ${C.headerBorder}`, padding: "0 14px", boxShadow: "0 2px 10px rgba(0,0,0,0.25)", fontSize: 13, position: "relative" }}>
         <div style={{ display: "flex", alignItems: "center", height: 46 }}>
           {/* 로고 */}
-          <div style={{ fontFamily: FONTS.header, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2, marginRight: 16, flexShrink: 0 }}>
+          <div onClick={() => setTab("menu_dashboard")} style={{ fontFamily: FONTS.header, fontSize: 16, fontWeight: 600, color: C.accent, letterSpacing: 2, marginRight: 16, flexShrink: 0, cursor: "pointer" }}>
             ◈ <span style={{ color: C.yellow }}>YW</span><span style={{ color: C.green }}>TRADE</span>
             <span style={{ fontSize: 9, fontWeight: 400, color: C.headerMuted, marginLeft: 6, letterSpacing: 0.5 }}>v{APP_VERSION}</span>
           </div>
