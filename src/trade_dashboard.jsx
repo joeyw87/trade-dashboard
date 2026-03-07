@@ -3,8 +3,9 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.5.6";
-const APP_DATE     = "2026-03-07";
+const APP_VERSION  = "1.4.0";
+const APP_DATE     = "2025-03-06";
+const APP_NOTES    = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
 
 // ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
@@ -1811,7 +1812,7 @@ async function fetchThemeQuote(t) {
 function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scanMode, onChangeScanMode, topVolumeError }) {
   const S = makeS(C);
   const [view, setView] = useState("sector"); // "sector" | "rank" | "heatmap"
-  const [kisSort, setKisSort] = useState({ key: "rank", dir: 1 }); // key: rank|price|changeRate|tradingValue|volume
+  const [kisSort, setKisSort] = useState({ key: null, dir: null }); // null=기본(rank순), -1=내림, 1=오름
 
   const ok = stocks.filter(s => !s.apiError);
 
@@ -1939,12 +1940,16 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
           { key: "volume",       label: "거래량",  sortable: true  },
         ];
         const toggleSort = key => {
-          setKisSort(prev => prev.key === key ? { key, dir: prev.dir * -1 } : { key, dir: -1 });
+          setKisSort(prev => {
+            if (prev.key !== key) return { key, dir: -1 };       // 새 컬럼 → 내림차순
+            if (prev.dir === -1)  return { key, dir:  1 };       // 내림 → 오름
+            return { key: null, dir: null };                      // 오름 → 기본(rank순)
+          });
         };
-        const sorted = [...ok].sort((a, b) => {
-          if (kisSort.key === "rank") return (a.rank ?? 999) - (b.rank ?? 999);
-          return ((a[kisSort.key] ?? 0) - (b[kisSort.key] ?? 0)) * kisSort.dir;
-        });
+        const sorted = (() => {
+          if (!kisSort.key) return [...ok].sort((a,b) => (a.rank??999)-(b.rank??999));
+          return [...ok].sort((a,b) => ((a[kisSort.key]??0)-(b[kisSort.key]??0)) * kisSort.dir);
+        })();
         return (
           <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
             <div className="mobile-scroll-x">
