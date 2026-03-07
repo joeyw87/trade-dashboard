@@ -3,8 +3,9 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.5.4";
-const APP_DATE     = "2026-03-07";
+const APP_VERSION  = "1.4.0";
+const APP_DATE     = "2025-03-06";
+const APP_NOTES    = "거래량 필터, 비동기 스트리밍, 탭 캐싱";
 
 // ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
@@ -443,6 +444,7 @@ const makeCSS = (C, isDark) => `
   html, body { overflow-x: hidden; max-width: 100vw; }
   .mobile-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; }
   .mobile-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .hamburger-btn { display: none; }
   @media (max-width: 600px) {
     .hide-mobile { display: none !important; }
     .hamburger-btn { display: flex !important; }
@@ -2690,11 +2692,11 @@ export default function StockDashboard() {
           <div style={{ flex: 1 }} />
           {/* 우측 컨트롤 */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div className={autoEnabled ? "pulse" : ""} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div className={`hide-mobile ${autoEnabled ? "pulse" : ""}`} style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <div className={autoEnabled ? "blink" : ""} style={{ width: 6, height: 6, borderRadius: "50%", background: autoEnabled ? C.green : C.headerMuted }} />
               <span style={{ fontFamily: FONTS.header, fontSize: 10, color: autoEnabled ? C.green : C.headerMuted }}>{autoEnabled ? "AUTO ON" : "AUTO OFF"}</span>
             </div>
-            <span style={{ fontFamily: FONTS.header, fontSize: 11, color: C.headerMuted }}>{fmtTime(time)}</span>
+            <span className="hide-mobile" style={{ fontFamily: FONTS.header, fontSize: 11, color: C.headerMuted }}>{fmtTime(time)}</span>
             <div className="hide-mobile" style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 4, padding: "4px 10px", fontSize: 11, color: C.yellow }}>
               KRW 12,845,320
             </div>
@@ -2714,7 +2716,7 @@ export default function StockDashboard() {
             <button
               className="hamburger-btn"
               onClick={() => setMobileMenuOpen(v => !v)}
-              style={{ display: "none", background: "none", border: `1px solid ${C.headerBorder}`, borderRadius: 4, padding: "5px 7px", cursor: "pointer", flexDirection: "column", gap: 4, alignItems: "center", justifyContent: "center" }}
+              style={{ background: "none", border: `1px solid ${C.headerBorder}`, borderRadius: 4, padding: "5px 7px", cursor: "pointer", flexDirection: "column", gap: 4, alignItems: "center", justifyContent: "center" }}
             >
               <span style={{ display: "block", width: 18, height: 2, background: C.headerMuted, borderRadius: 1, transition: "transform 0.2s", transform: mobileMenuOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }} />
               <span style={{ display: "block", width: 18, height: 2, background: C.headerMuted, borderRadius: 1, transition: "opacity 0.2s", opacity: mobileMenuOpen ? 0 : 1 }} />
