@@ -3,7 +3,7 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.5.5";
+const APP_VERSION  = "1.5.6";
 const APP_DATE     = "2026-03-07";
 
 // ════════════════════════════════════════════════════════
@@ -1765,17 +1765,29 @@ const THEME_RENDER_URL = "https://trade-backend-3o2e.onrender.com";
 
 
 // 거래대금 상위 종목 리스트 가져오기 (백엔드 프록시)
-async function fetchTopVolumeList(limit = 50) {
-  const res = await fetch(`${THEME_RENDER_URL}/api/top-volume?limit=${limit}`);
-  if (!res.ok) throw new Error(`top-volume API 실패: ${res.status}`);
+async function fetchTopVolumeList() {
+  const res = await fetch("http://localhost:3001/api/kis/top-volume");
+  if (!res.ok) throw new Error("top-volume API 실패: " + res.status);
   const data = await res.json();
-  // 백엔드 응답 형식: [{ code, name, market }] 또는 [{ ticker, name }]
-  return data.map(item => {
-    const code   = item.code || item.ticker?.split(".")[0] || "";
-    const market = item.market === "KOSDAQ" ? "KQ" : "KS";
-    const ticker = item.ticker || `${code}.${market}`;
-    return { ticker, code, name: item.name };
-  });
+  if (!data.success || !Array.isArray(data.topStocks)) throw new Error("응답 형식 오류");
+  return data.topStocks.map(item => ({
+    rank:         item.rank,
+    ticker:       item.ticker,
+    code:         item.ticker,
+    name:         item.name,
+    price:        item.price,
+    changeRate:   item.changeRate,
+    changeAmount: item.changeAmount,
+    changeSign:   item.changeSign,   // 1:상한 2:상승 3:보합 4:하한 5:하락
+    volume:       item.volume,
+    tradingValue: item.tradeValue,
+    openPrice:    item.openPrice,
+    highPrice:    item.highPrice,
+    lowPrice:     item.lowPrice,
+    sector:       SECTOR_MAP[item.ticker] || "기타",
+    apiError:     false,
+    fromKis:      true,
+  }));
 }
 
 async function fetchThemeQuote(t) {
@@ -1796,9 +1808,10 @@ async function fetchThemeQuote(t) {
   return { ...t, price, prevClose, changeRate, volRate, tradingValue, closes, sector, apiError: false };
 }
 
-function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scanLimit, onChangeScanLimit, scanMode, onChangeScanMode, topVolumeError }) {
+function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scanMode, onChangeScanMode, topVolumeError }) {
   const S = makeS(C);
   const [view, setView] = useState("sector"); // "sector" | "rank" | "heatmap"
+  const [kisSort, setKisSort] = useState({ key: "rank", dir: 1 }); // key: rank|price|changeRate|tradingValue|volume
 
   const ok = stocks.filter(s => !s.apiError);
 
@@ -1820,7 +1833,9 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
   // 상승 TOP10
   const topRise = [...ok].sort((a,b) => b.changeRate - a.changeRate).slice(0, 10);
   // 거래대금 TOP10
-  const topValue = [...ok].sort((a,b) => b.tradingValue - a.tradingValue).slice(0, 10);
+  const topValue = stocks[0]?.fromKis
+    ? [...ok].sort((a,b) => (a.rank||999) - (b.rank||999))  // KIS 모드: rank 순 그대로
+    : [...ok].sort((a,b) => b.tradingValue - a.tradingValue).slice(0, 10);
 
   const notFetched = !loading && stocks.length === 0;
 
@@ -1846,33 +1861,26 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
                 </button>
               ))}
             </div>
-            {/* 거래대금 상위 모드일 때 개수 선택 */}
-            {scanMode === "topvolume" && (
-              <div style={{ display: "flex", borderRadius: 4, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                {[50, 75, 100].map(n => (
-                  <button key={n} onClick={() => onChangeScanLimit(n)} disabled={loading}
-                    style={{ padding: "5px 10px", border: "none", cursor: loading ? "not-allowed" : "pointer", fontSize: "0.769em", fontFamily: FONTS.mono,
-                      background: scanLimit === n ? `${C.red}30` : "transparent",
-                      color: scanLimit === n ? C.red : C.muted, fontWeight: scanLimit === n ? 700 : 400, transition: "all 0.15s" }}>
-                    {n}개
-                  </button>
-                ))}
-              </div>
-            )}
+
             {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
             {loading
-              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.red }}>{loadedCount} / {scanMode === "topvolume" ? scanLimit : THEME_TICKERS.length} 완료</span>
+              ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.red }}>{scanMode === "topvolume" ? "거래대금 상위 조회 중..." : `${loadedCount} / ${THEME_TICKERS.length} 완료`}</span>
               : <button onClick={onReload} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.red}`, background: `${C.red}15`, color: C.red }}>
                   🔄 새로고침
                 </button>
             }
           </div>
         </div>
-        {loading && <ProgressBar current={loadedCount} total={scanMode === "topvolume" ? scanLimit : THEME_TICKERS.length} accentColor={C.red} C={C} />}
+        {loading && scanMode !== "topvolume" && <ProgressBar current={loadedCount} total={THEME_TICKERS.length} accentColor={C.red} C={C} />}
+        {loading && scanMode === "topvolume" && (
+          <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: C.border, overflow: "hidden" }}>
+            <div className="shimmer" style={{ width: "100%", height: "100%", background: `linear-gradient(90deg, transparent, ${C.red}60, transparent)`, animation: "shimmer 1.2s infinite" }} />
+          </div>
+        )}
         {/* 거래대금 상위 API 에러 안내 */}
         {topVolumeError && !loading && (
           <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 4, background: `${C.red}12`, border: `1px solid ${C.red}30`, fontSize: "0.846em", color: C.red }}>
-            ⚠ 거래대금 상위 종목 조회 실패: {topVolumeError} — 백엔드에 /api/top-volume 엔드포인트가 필요합니다.
+            ⚠ 거래대금 상위 종목 조회 실패: {topVolumeError} — 백엔드에 /api/kis/top-volume 엔드포인트가 필요합니다.
           </div>
         )}
       </div>
@@ -1884,7 +1892,7 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
           <div style={{ fontFamily: FONTS.mono, fontSize: "1.077em", fontWeight: 700, color: C.text, marginBottom: 8 }}>주도/테마 분석</div>
           <div style={{ fontSize: "0.923em", color: C.muted, marginBottom: 20, lineHeight: 1.7 }}>
             당일 섹터별 자금 흐름과 주도주를 분석합니다.<br />
-            {scanMode === "topvolume" ? `거래대금 상위 ${scanLimit}개 종목을 실시간 조회합니다.` : `${THEME_TICKERS.length}개 고정 종목을 조회합니다.`}
+            {scanMode === "topvolume" ? "거래대금 상위 종목을 실시간 조회합니다." : `${THEME_TICKERS.length}개 고정 종목을 조회합니다.`}
           </div>
           <button onClick={onReload} style={{ padding: "10px 28px", borderRadius: 6, fontSize: "0.923em", cursor: "pointer", border: `1px solid ${C.red}`, background: `${C.red}15`, color: C.red, fontFamily: FONTS.mono, fontWeight: 700 }}>
             🔥 분석 시작
@@ -1892,8 +1900,8 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
         </div>
       )}
 
-      {/* ── 요약 카드 4개 ── */}
-      {ok.length > 0 && (
+      {/* ── 요약 카드 4개 — 프리셋 모드만 ── */}
+      {ok.length > 0 && !stocks[0]?.fromKis && (
         <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
           {[
             { label: "상승 섹터", value: sectorStats.filter(s=>s.avg>0).length + "개", color: C.green },
@@ -1909,8 +1917,8 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
         </div>
       )}
 
-      {/* ── 뷰 전환 탭 ── */}
-      {ok.length > 0 && (
+      {/* ── 뷰 전환 탭 — 프리셋 모드만 ── */}
+      {ok.length > 0 && !stocks[0]?.fromKis && (
         <div style={{ display: "flex", gap: 6 }}>
           {[["sector","📊 섹터 분석"], ["rank","🏆 주도주 랭킹"], ["heatmap","🌡 테마 히트맵"]].map(([id, label]) => (
             <button key={id} onClick={() => setView(id)} style={{ padding: "7px 16px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${view===id ? C.red : C.border}`, background: view===id ? `${C.red}18` : "transparent", color: view===id ? C.red : C.muted, fontWeight: view===id ? 700 : 400, transition: "all 0.2s" }}>
@@ -1919,6 +1927,89 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
           ))}
         </div>
       )}
+
+      {/* ────────────── 📋 거래대금 상위 KIS 리스트 뷰 ────────────── */}
+      {ok.length > 0 && stocks[0]?.fromKis && (() => {
+        const COLS = [
+          { key: "rank",         label: "순위",    sortable: false },
+          { key: "name",         label: "종목",    sortable: false },
+          { key: "price",        label: "현재가",  sortable: true  },
+          { key: "changeRate",   label: "등락률",  sortable: true  },
+          { key: "tradingValue", label: "거래대금",sortable: true  },
+          { key: "volume",       label: "거래량",  sortable: true  },
+        ];
+        const toggleSort = key => {
+          setKisSort(prev => prev.key === key ? { key, dir: prev.dir * -1 } : { key, dir: -1 });
+        };
+        const sorted = [...ok].sort((a, b) => {
+          if (kisSort.key === "rank") return (a.rank ?? 999) - (b.rank ?? 999);
+          return ((a[kisSort.key] ?? 0) - (b[kisSort.key] ?? 0)) * kisSort.dir;
+        });
+        return (
+          <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+            <div className="mobile-scroll-x">
+            <div style={{ minWidth: 520 }}>
+              {/* 헤더 */}
+              <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 100px 80px 100px 80px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+                {COLS.map(col => (
+                  <div key={col.key}
+                    onClick={() => col.sortable && toggleSort(col.key)}
+                    style={{ display: "flex", alignItems: "center", gap: 3, cursor: col.sortable ? "pointer" : "default", userSelect: "none" }}>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: kisSort.key === col.key ? C.accent : C.muted, letterSpacing: 0.5, fontWeight: kisSort.key === col.key ? 700 : 400 }}>{col.label}</span>
+                    {col.sortable && (
+                      <span style={{ fontSize: "0.6em", color: kisSort.key === col.key ? C.accent : C.border, lineHeight: 1 }}>
+                        {kisSort.key === col.key ? (kisSort.dir === -1 ? "▼" : "▲") : "⇅"}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* 행 */}
+              {sorted.map((s, i) => {
+                const sign = s.changeSign;
+                const isUp   = sign === "1" || sign === "2";
+                const isDown = sign === "4" || sign === "5";
+                const isFlat = sign === "3";
+                const priceCol = isUp ? C.green : isDown ? C.red : C.muted;
+                const signMark = isUp ? "▲" : isDown ? "▼" : "━";
+                return (
+                  <div key={s.ticker} style={{ display: "grid", gridTemplateColumns: "40px 1fr 100px 80px 100px 80px", padding: "10px 16px", borderBottom: `1px solid ${C.border}15`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}50` }}>
+                    {/* 순위 */}
+                    <span style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.923em", color: s.rank <= 3 ? C.yellow : C.muted }}>
+                      {s.rank <= 3 ? ["🥇","🥈","🥉"][s.rank-1] : `#${s.rank}`}
+                    </span>
+                    {/* 종목명 + 코드 */}
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "0.923em", color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, marginTop: 1 }}>{s.ticker}</div>
+                    </div>
+                    {/* 현재가 */}
+                    <div>
+                      <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.923em", color: priceCol }}>{s.price?.toLocaleString()}원</div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: priceCol, marginTop: 1 }}>
+                        {signMark} {s.changeAmount != null ? Math.abs(s.changeAmount).toLocaleString() : "—"}
+                      </div>
+                    </div>
+                    {/* 등락률 */}
+                    <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "0.923em", color: priceCol }}>
+                      {isFlat ? "0.00%" : `${isUp ? "+" : ""}${s.changeRate?.toFixed(2)}%`}
+                    </div>
+                    {/* 거래대금 */}
+                    <div style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.yellow, fontWeight: 600 }}>
+                      {fmtValue(s.tradingValue)}
+                    </div>
+                    {/* 거래량 */}
+                    <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>
+                      {s.volume != null ? `${(s.volume / 10000).toFixed(1)}만` : "—"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ────────────── 📊 섹터 분석 뷰 ────────────── */}
       {ok.length > 0 && view === "sector" && (
@@ -2478,7 +2569,7 @@ export default function StockDashboard() {
   const [themeLoadedCount, setThemeLoadedCount] = useState(0);
   const [themeLastUpdated, setThemeLastUpdated] = useState(null);
   const [themeFetched,     setThemeFetched]     = useState(false);
-  const [themeScanMode,    setThemeScanMode]    = useState("preset");   // "preset" | "topvolume"
+  const [themeScanMode,    setThemeScanMode]    = useState("topvolume");   // "preset" | "topvolume"
   const [themeScanLimit,   setThemeScanLimit]   = useState(50);
   const [topVolumeError,   setTopVolumeError]   = useState(null);
 
@@ -2490,18 +2581,27 @@ export default function StockDashboard() {
 
     let targetList = THEME_TICKERS;
 
-    // 거래대금 상위 모드: 백엔드에서 종목 리스트 먼저 조회
+    // ── 거래대금 상위 모드: KIS API에서 직접 데이터 수신 ──────────
     if (themeScanMode === "topvolume") {
       try {
-        targetList = await fetchTopVolumeList(themeScanLimit);
+        const kisList = await fetchTopVolumeList();
+        // KIS 응답에 이미 price/changeRate/tradingValue 포함 → Yahoo 재조회 불필요
+        setThemeStocks(kisList);
+        setThemeLoadedCount(kisList.length);
+        setThemeLastUpdated(new Date());
+        setThemeLoading(false);
+        setThemeFetched(true);
+        return;
       } catch (err) {
         console.warn("top-volume 조회 실패:", err);
         setTopVolumeError(err.message);
-        // 실패 시 고정 종목으로 폴백
-        targetList = THEME_TICKERS;
+        setThemeLoading(false);
+        setThemeFetched(true);
+        return;
       }
     }
 
+    // ── 프리셋 모드: Yahoo Finance 개별 조회 ─────────────────────
     for (const t of targetList) {
       try {
         const d = await fetchThemeQuote(t);
@@ -2904,7 +3004,7 @@ export default function StockDashboard() {
         {tab === "menu_yw-pick" && <YwPickTab C={C} stocks={ywStocks} loading={ywLoading} loadedCount={ywLoadedCount} error={ywError} lastUpdated={ywLastUpdated} onReload={loadYwData} ywPickTickers={ywTickers} onAddYwTicker={isAdmin ? t => setYwTickers(prev => [...prev, t]) : undefined} onDeleteYwTicker={isAdmin ? ticker => setYwTickers(prev => prev.filter(x => x.ticker !== ticker)) : undefined} />}
 
         {/* ━━━ 주도/테마 ━━━ */}
-        {tab === "menu_theme" && <ThemeTab C={C} stocks={themeStocks} loading={themeLoading} loadedCount={themeLoadedCount} lastUpdated={themeLastUpdated} onReload={loadThemeData} scanMode={themeScanMode} onChangeScanMode={mode => { setThemeScanMode(mode); setThemeFetched(false); setThemeStocks([]); }} scanLimit={themeScanLimit} onChangeScanLimit={n => { setThemeScanLimit(n); setThemeFetched(false); setThemeStocks([]); }} topVolumeError={topVolumeError} />}
+        {tab === "menu_theme" && <ThemeTab C={C} stocks={themeStocks} loading={themeLoading} loadedCount={themeLoadedCount} lastUpdated={themeLastUpdated} onReload={loadThemeData} scanMode={themeScanMode} onChangeScanMode={mode => { setThemeScanMode(mode); setThemeFetched(false); setThemeStocks([]); }} topVolumeError={topVolumeError} />}
 
         {/* ━━━ 포트폴리오 ━━━ */}
         {tab === "menu_portfolio" && (
