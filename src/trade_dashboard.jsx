@@ -3,8 +3,8 @@ import { useState, useEffect, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.5.7";
-const APP_DATE     = "2026-03-07";
+const APP_VERSION  = "1.6.1";
+const APP_DATE     = "2026-03-08";
 
 // ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
@@ -75,6 +75,7 @@ const TABS = [
   { id: "menu_auto",      label: "자동매매",    adminOnly: true },
   { id: "menu_portfolio", label: "포트폴리오",  adminOnly: true },
   { id: "menu_log",       label: "로그",        adminOnly: true },
+  { id: "menu_admin",     label: "관리자설정",  adminOnly: true },
 ];
 
 const CLOSING_SECTIONS = [
@@ -460,6 +461,9 @@ const makeCSS = (C, isDark) => `
     .filter-grid       { grid-template-columns: 1fr !important; }
     .filter-grid-inner { grid-template-columns: 1fr !important; }
     .env-param-grid    { grid-template-columns: 1fr !important; }
+    .auto-grid         { grid-template-columns: 1fr !important; }
+    .param-grid        { grid-template-columns: 1fr !important; }
+    .admin-layout      { grid-template-columns: 1fr !important; }
     .header-right      { gap: 6px !important; }
     .main-padding      { padding: 10px !important; }
   }
@@ -1765,8 +1769,8 @@ const THEME_RENDER_URL = "https://trade-backend-3o2e.onrender.com";
 
 
 // 거래대금 상위 종목 리스트 가져오기 (백엔드 프록시)
-async function fetchTopVolumeList() {
-  const res = await fetch("http://localhost:3001/api/kis/top-volume");
+async function fetchTopVolumeList(exclCode = "0000000000") {
+  const res = await fetch(`http://localhost:3001/api/kis/top-volume?exclCode=${encodeURIComponent(exclCode)}`);
   if (!res.ok) throw new Error("top-volume API 실패: " + res.status);
   const data = await res.json();
   if (!data.success || !Array.isArray(data.topStocks)) throw new Error("응답 형식 오류");
@@ -1808,12 +1812,19 @@ async function fetchThemeQuote(t) {
   return { ...t, price, prevClose, changeRate, volRate, tradingValue, closes, sector, apiError: false };
 }
 
-function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scanMode, onChangeScanMode, topVolumeError }) {
+function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scanMode, onChangeScanMode, topVolumeError, kisExclCode, onChangeExclCode, kisMinTv, onChangeMinTv, kisMinVol, onChangeMinVol }) {
   const S = makeS(C);
   const [view, setView] = useState("sector"); // "sector" | "rank" | "heatmap"
   const [kisSort, setKisSort] = useState({ key: null, dir: null }); // null=기본(rank순), -1=내림, 1=오름
+  const [exclOpen, setExclOpen]   = useState(false); // 제외 필터: 기본 접힘
+  const [tvVolOpen, setTvVolOpen] = useState(true);  // 수량 필터: 기본 펼침
 
-  const ok = stocks.filter(s => !s.apiError);
+  const ok = stocks.filter(s => {
+    if (s.apiError) return false;
+    if (kisMinTv  > 0 && (s.tradingValue || 0) < kisMinTv  * 1e8) return false;
+    if (kisMinVol > 0 && (s.volume       || 0) < kisMinVol * 1e4) return false;
+    return true;
+  });
 
   // 섹터별 그룹핑
   const sectors = {};
@@ -1884,6 +1895,197 @@ function ThemeTab({ C, stocks, loading, loadedCount, lastUpdated, onReload, scan
           </div>
         )}
       </div>
+
+      {/* ── KIS 제외 필터 패널 (거래대금 상위 모드만) ── */}
+      {scanMode === "topvolume" && (() => {
+        const EXCL_BITS = [
+          { idx: 0, label: "투자위험",   icon: "🚨" },
+          { idx: 1, label: "투자경고",   icon: "⚠️" },
+          { idx: 2, label: "투자주의",   icon: "🔔" },
+          { idx: 3, label: "관리종목",   icon: "🏥" },
+          { idx: 4, label: "정리매매",   icon: "📉" },
+          { idx: 5, label: "불성실공시", icon: "📋" },
+          { idx: 6, label: "우선주",     icon: "🅿️" },
+          { idx: 7, label: "거래정지",   icon: "🚫" },
+          { idx: 8, label: "ETF/ETN",    icon: "📦" },
+          { idx: 9, label: "신용불가",   icon: "💳" },
+        ];
+        const codeArr    = (kisExclCode || "0000000000").split("").map(Number);
+        const toggle     = idx => { const n = [...codeArr]; n[idx] = n[idx] === 1 ? 0 : 1; onChangeExclCode(n.join("")); };
+        const activeCount = codeArr.filter(v => v === 1).length;
+        const PRESETS    = [
+          { label: "없음",        code: "0000000000" },
+          { label: "ETF 제외",    code: "0000000100" },
+          { label: "우선주+ETF",  code: "0000001100" },
+          { label: "위험군",      code: "1110000000" },
+          { label: "전체 제외",   code: "1111111111" },
+        ];
+        return (
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+            {/* 헤더 */}
+            <div onClick={() => setExclOpen(v => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: C.panelAlt, cursor: "pointer", userSelect: "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>제외 필터</span>
+                {activeCount > 0 && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.red, background: `${C.red}12`, border: `1px solid ${C.red}30`, borderRadius: 4, padding: "1px 7px" }}>{activeCount}개 제외 중</span>
+                )}
+                {!exclOpen && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, background: `${C.border}30`, border: `1px solid ${C.border}`, borderRadius: 4, padding: "1px 7px" }}>
+                    {kisExclCode || "0000000000"}
+                  </span>
+                )}
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: exclOpen ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s" }}>
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+            </div>
+            {/* 본문 슬라이드 */}
+            <div style={{ overflow: "hidden", maxHeight: exclOpen ? 400 : 0, transition: "max-height 0.4s ease" }}>
+              {/* 프리셋 + 토글 */}
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}20` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, marginRight: 2 }}>프리셋</span>
+                  {PRESETS.map(p => (
+                    <button key={p.label} onClick={e => { e.stopPropagation(); onChangeExclCode(p.code); }}
+                      style={{ padding: "3px 10px", borderRadius: 4, fontSize: "0.692em", cursor: "pointer", fontFamily: FONTS.mono,
+                        border: `1px solid ${(kisExclCode||"0000000000") === p.code ? C.accent : C.border}`,
+                        background: (kisExclCode||"0000000000") === p.code ? `${C.accent}18` : "transparent",
+                        color: (kisExclCode||"0000000000") === p.code ? C.accent : C.muted }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                  {EXCL_BITS.map(({ idx, label, icon }) => {
+                    const on = codeArr[idx] === 1;
+                    return (
+                      <button key={idx} onClick={e => { e.stopPropagation(); toggle(idx); }}
+                        style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 11px", borderRadius: 6, cursor: "pointer", transition: "all 0.15s", fontSize: "0.846em",
+                          border: `1px solid ${on ? C.red : C.border}`,
+                          background: on ? `${C.red}15` : "transparent",
+                          color: on ? C.red : C.muted, fontWeight: on ? 700 : 400 }}>
+                        <span>{icon}</span>
+                        <span>{label}</span>
+                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.75em", opacity: 0.7 }}>{on ? "제외" : "포함"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* 비트 미리보기 바 */}
+              <div style={{ padding: "8px 16px 10px", display: "flex", gap: 3, alignItems: "center" }}>
+                {codeArr.map((v, i) => (
+                  <div key={i} title={EXCL_BITS[i]?.label} onClick={e => { e.stopPropagation(); toggle(i); }}
+                    style={{ width: 22, height: 22, borderRadius: 3, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      background: v === 1 ? `${C.red}30` : C.panelAlt,
+                      border: `1px solid ${v === 1 ? C.red : C.border}`,
+                      fontFamily: FONTS.mono, fontSize: "0.769em", fontWeight: 700,
+                      color: v === 1 ? C.red : C.muted, transition: "all 0.15s" }}>
+                    {v}
+                  </div>
+                ))}
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, marginLeft: 6 }}>FID_TRGT_EXLS_CLS_CODE</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── 거래대금 / 거래량 조건 필터 (거래대금 상위 모드만) ── */}
+      {scanMode === "topvolume" && (() => {
+        const TV_PRESETS  = [0, 100, 500, 1000, 3000, 5000];
+        const VOL_PRESETS = [0, 10, 50, 100, 500, 1000];
+        const hasFilter   = kisMinTv > 0 || kisMinVol > 0;
+        return (
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+            {/* 헤더 */}
+            <div onClick={() => setTvVolOpen(v => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: C.panelAlt, cursor: "pointer", userSelect: "none" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>수량 조건 필터</span>
+                {hasFilter ? (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.yellow, background: `${C.yellow}12`, border: `1px solid ${C.yellow}30`, borderRadius: 4, padding: "1px 7px" }}>
+                    {[kisMinTv  > 0 && `거래대금 ${kisMinTv >= 10000 ? (kisMinTv/10000)+'조' : kisMinTv+'억'}↑`,
+                      kisMinVol > 0 && `거래량 ${kisMinVol}만주↑`].filter(Boolean).join("  ·  ")}
+                  </span>
+                ) : !tvVolOpen && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, background: `${C.border}30`, border: `1px solid ${C.border}`, borderRadius: 4, padding: "1px 7px" }}>제한없음</span>
+                )}
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: tvVolOpen ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s" }}>
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+            </div>
+            {/* 본문 슬라이드 */}
+            <div style={{ overflow: "hidden", maxHeight: tvVolOpen ? 400 : 0, transition: "max-height 0.4s ease" }}>
+              <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+                {/* 거래대금 */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ fontSize: "0.846em", color: C.muted }}>최소 거래대금</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="number" value={kisMinTv} min={0} step={100}
+                        onChange={e => onChangeMinTv(Math.max(0, +e.target.value))}
+                        style={{ width: 80, padding: "4px 8px", borderRadius: 4, border: `1px solid ${kisMinTv > 0 ? C.yellow : C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.923em", textAlign: "right", outline: "none" }} />
+                      <span style={{ fontSize: "0.846em", color: C.muted }}>억원</span>
+                      {kisMinTv > 0 && <button onClick={() => onChangeMinTv(0)} style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.692em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>초기화</button>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    {TV_PRESETS.map(v => (
+                      <button key={v} onClick={() => onChangeMinTv(v)}
+                        style={{ padding: "5px 12px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono,
+                          border: `1px solid ${kisMinTv === v ? C.yellow : C.border}`,
+                          background: kisMinTv === v ? `${C.yellow}18` : "transparent",
+                          color: kisMinTv === v ? C.yellow : C.muted, transition: "all 0.15s" }}>
+                        {v === 0 ? "제한없음" : v >= 10000 ? `${v/10000}조↑` : `${v}억↑`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: C.border, opacity: 0.4 }} />
+
+                {/* 거래량 */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ fontSize: "0.846em", color: C.muted }}>최소 거래량</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="number" value={kisMinVol} min={0} step={10}
+                        onChange={e => onChangeMinVol(Math.max(0, +e.target.value))}
+                        style={{ width: 80, padding: "4px 8px", borderRadius: 4, border: `1px solid ${kisMinVol > 0 ? C.yellow : C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.923em", textAlign: "right", outline: "none" }} />
+                      <span style={{ fontSize: "0.846em", color: C.muted }}>만주</span>
+                      {kisMinVol > 0 && <button onClick={() => onChangeMinVol(0)} style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.692em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>초기화</button>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    {VOL_PRESETS.map(v => (
+                      <button key={v} onClick={() => onChangeMinVol(v)}
+                        style={{ padding: "5px 12px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono,
+                          border: `1px solid ${kisMinVol === v ? C.yellow : C.border}`,
+                          background: kisMinVol === v ? `${C.yellow}18` : "transparent",
+                          color: kisMinVol === v ? C.yellow : C.muted, transition: "all 0.15s" }}>
+                        {v === 0 ? "제한없음" : `${v}만주↑`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 미조회 안내 ── */}
       {notFetched && (
@@ -2384,62 +2586,773 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
 //  12. 전략 설정 패널
 // ════════════════════════════════════════════════════════
 
-function StrategyPanel({ strategy, rsiPeriod, rsiBuy, rsiSell, setRsiPeriod, setRsiBuy, setRsiSell, C }) {
-  const S = makeS(C);
-  if (strategy === "rsi") return (
-    <div style={S.panel} className="slide-in">
-      <PanelHeader label="RSI 전략 설정" C={C} />
-      <div style={{ ...S.grid("1fr 1fr 1fr"), marginBottom: 16 }}>
-        <InputField label="RSI 기간" type="number" value={rsiPeriod} min={1} max={100} onChange={e => setRsiPeriod(+e.target.value)} C={C} />
-        <InputField label="매수 기준 (RSI <)" type="number" value={rsiBuy} min={10} max={50} onChange={e => setRsiBuy(+e.target.value)} C={C} />
-        <InputField label="매도 기준 (RSI >)" type="number" value={rsiSell} min={50} max={90} onChange={e => setRsiSell(+e.target.value)} C={C} />
+// ════════════════════════════════════════════════════════
+//  12-B. 자동매매 탭 (KIS API)
+// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  12-A. 관리자 설정 탭
+// ════════════════════════════════════════════════════════
+// ── 메뉴별 종목설정 패널 (AdminSettingsTab 내부 섹션) ──────────
+const MENU_META = [
+  { id: "closing", label: "⚡ 종가베팅",  desc: "종가베팅 스캔 대상 종목" },
+  { id: "yw",      label: "⭐ 영욱문",    desc: "엔벨로프 하한 스캔 대상 종목" },
+  { id: "theme",   label: "🔥 주도/테마", desc: "고정 테마 분석 종목" },
+];
+
+function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, setYwTickers, themeTickers, setThemeTickers }) {
+  const [activeMenu, setActiveMenu] = useState("closing");
+  const [search,     setSearch]     = useState("");
+  const [addInput,   setAddInput]   = useState({ ticker: "", name: "" });
+  const [editIdx,    setEditIdx]    = useState(null);
+  const [editVal,    setEditVal]    = useState({ ticker: "", name: "" });
+  const [confirmDel, setConfirmDel] = useState(null);
+
+  const listMap = { closing: watchTickers, yw: ywTickers, theme: themeTickers };
+  const setMap  = { closing: setWatchTickers, yw: setYwTickers, theme: setThemeTickers };
+  const list    = listMap[activeMenu] || [];
+  const setList = setMap[activeMenu];
+  const meta    = MENU_META.find(m => m.id === activeMenu);
+
+  const filtered = list.filter(t =>
+    t.ticker.toLowerCase().includes(search.toLowerCase()) ||
+    (t.name || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const addTicker = () => {
+    const ticker = addInput.ticker.trim().toUpperCase();
+    if (!ticker || list.find(t => t.ticker === ticker)) return;
+    setList(prev => [...prev, { ticker, name: addInput.name.trim() || ticker }]);
+    setAddInput({ ticker: "", name: "" });
+  };
+  const deleteTicker = ticker => { setList(prev => prev.filter(t => t.ticker !== ticker)); setConfirmDel(null); };
+  const saveEdit = idx => {
+    const ticker = editVal.ticker.trim().toUpperCase();
+    if (!ticker) return;
+    setList(prev => prev.map((t, i) => i === idx ? { ...t, ticker, name: editVal.name.trim() || ticker } : t));
+    setEditIdx(null);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* 메뉴 탭 + 요약 카드 */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {MENU_META.map(m => {
+          const cnt = listMap[m.id]?.length ?? 0;
+          const active = activeMenu === m.id;
+          return (
+            <button key={m.id} onClick={() => { setActiveMenu(m.id); setSearch(""); setEditIdx(null); setConfirmDel(null); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 6, cursor: "pointer", transition: "all 0.15s",
+                border: `1px solid ${active ? C.accent : C.border}`,
+                background: active ? `${C.accent}12` : C.panelAlt,
+                color: active ? C.accent : C.muted, fontWeight: active ? 700 : 400 }}>
+              <span style={{ fontSize: "0.923em" }}>{m.label}</span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", padding: "1px 6px", borderRadius: 10,
+                background: active ? `${C.accent}25` : `${C.border}40`,
+                color: active ? C.accent : C.muted }}>{cnt}</span>
+            </button>
+          );
+        })}
       </div>
-      <div style={{ background: C.panelAlt, borderRadius: 6, padding: 16, border: `1px solid ${C.border}` }}>
-        <div style={{ ...S.monoLabel, marginBottom: 8 }}>RSI 시뮬레이션</div>
-        <svg width="100%" viewBox="0 0 500 80">
-          <rect width="500" height="80" fill={C.panelAlt} />
-          <line x1="0" y1={80 - rsiSell * 0.8} x2="500" y2={80 - rsiSell * 0.8} stroke={C.red} strokeWidth="0.8" strokeDasharray="4,4" opacity="0.6" />
-          <line x1="0" y1={80 - rsiBuy * 0.8} x2="500" y2={80 - rsiBuy * 0.8} stroke={C.green} strokeWidth="0.8" strokeDasharray="4,4" opacity="0.6" />
-          <polyline points={Array.from({ length: 50 }, (_, i) => `${i * 10},${80 - (30 + Math.sin(i * 0.5) * 25 + Math.sin(i * 0.2) * 15) * 0.8}`).join(" ")} fill="none" stroke={C.accent} strokeWidth="1.5" />
-          <text x="4" y={80 - rsiSell * 0.8 - 3} fill={C.red} fontSize="8" fontFamily="monospace">매도 {rsiSell}</text>
-          <text x="4" y={80 - rsiBuy * 0.8 + 10} fill={C.green} fontSize="8" fontFamily="monospace">매수 {rsiBuy}</text>
-        </svg>
+
+      {/* 종목 리스트 패널 */}
+      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+        {/* 패널 헤더 */}
+        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>{meta?.label} 종목 목록</span>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.accent, background: `${C.accent}12`, border: `1px solid ${C.accent}25`, borderRadius: 4, padding: "1px 7px" }}>
+              {filtered.length} / {list.length}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="코드/종목명 검색..."
+              style={{ padding: "5px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.846em", outline: "none", width: 160 }} />
+            {search && <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: "1em", padding: 0 }}>✕</button>}
+          </div>
+        </div>
+        {/* 컬럼 헤더 */}
+        <div style={{ display: "grid", gridTemplateColumns: "50px 1fr 1fr 90px", padding: "7px 16px", background: `${C.panelAlt}80`, borderBottom: `1px solid ${C.border}` }}>
+          {["#", "종목코드", "종목명", ""].map(h => (
+            <span key={h} style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{h}</span>
+          ))}
+        </div>
+        {/* 종목 행 */}
+        <div style={{ maxHeight: 400, overflowY: "auto" }}>
+          {filtered.length === 0 && (
+            <div style={{ padding: 32, textAlign: "center", color: C.muted, fontSize: "0.923em" }}>
+              {search ? `"${search}" 검색 결과 없음` : "등록된 종목이 없습니다"}
+            </div>
+          )}
+          {filtered.map((t, i) => {
+            const realIdx = list.indexOf(t);
+            const isEditing = editIdx === realIdx;
+            return (
+              <div key={t.ticker} style={{ display: "grid", gridTemplateColumns: "50px 1fr 1fr 90px", padding: "9px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: isEditing ? `${C.accent}06` : i % 2 === 0 ? "transparent" : `${C.panelAlt}40`, transition: "background 0.15s" }}>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{realIdx + 1}</span>
+                {isEditing
+                  ? <input value={editVal.ticker} onChange={e => setEditVal(v => ({ ...v, ticker: e.target.value.toUpperCase() }))} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.923em", outline: "none", width: "90%" }} />
+                  : <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.accent }}>{t.ticker}</span>}
+                {isEditing
+                  ? <input value={editVal.name} onChange={e => setEditVal(v => ({ ...v, name: e.target.value }))} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, background: C.panelAlt, color: C.text, fontSize: "0.923em", outline: "none", width: "90%" }} />
+                  : <span style={{ fontSize: "0.923em", color: C.text }}>{t.name}</span>}
+                <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
+                  {isEditing ? (
+                    <>
+                      <button onClick={() => saveEdit(realIdx)} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.green}`, background: `${C.green}15`, color: C.green, fontWeight: 700 }}>저장</button>
+                      <button onClick={() => setEditIdx(null)} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>취소</button>
+                    </>
+                  ) : confirmDel === t.ticker ? (
+                    <>
+                      <button onClick={() => deleteTicker(t.ticker)} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}`, background: `${C.red}15`, color: C.red, fontWeight: 700 }}>삭제</button>
+                      <button onClick={() => setConfirmDel(null)} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>취소</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => { setEditIdx(realIdx); setEditVal({ ticker: t.ticker, name: t.name || "" }); }} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>수정</button>
+                      <button onClick={() => setConfirmDel(t.ticker)} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red }}>삭제</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* 추가 행 */}
+        <div style={{ padding: "10px 16px", borderTop: `1px solid ${C.border}`, background: `${C.panelAlt}60`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <input value={addInput.ticker} onChange={e => setAddInput(v => ({ ...v, ticker: e.target.value.toUpperCase() }))} onKeyDown={e => e.key === "Enter" && addTicker()} placeholder="종목코드" maxLength={12}
+            style={{ padding: "6px 10px", borderRadius: 4, border: `1px solid ${addInput.ticker ? C.accent : C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.923em", outline: "none", width: 110, transition: "border 0.15s" }} />
+          <input value={addInput.name} onChange={e => setAddInput(v => ({ ...v, name: e.target.value }))} onKeyDown={e => e.key === "Enter" && addTicker()} placeholder="종목명 (선택)"
+            style={{ padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontSize: "0.923em", outline: "none", flex: 1, minWidth: 120 }} />
+          <button onClick={addTicker} disabled={!addInput.ticker}
+            style={{ padding: "6px 16px", borderRadius: 4, fontSize: "0.846em", fontWeight: 700, cursor: addInput.ticker ? "pointer" : "not-allowed", border: `1px solid ${addInput.ticker ? C.accent : C.border}`, background: addInput.ticker ? `${C.accent}20` : "transparent", color: addInput.ticker ? C.accent : C.muted }}>
+            + 추가
+          </button>
+          {list.length > 0 && (
+            <button onClick={() => { if (window.confirm(`${meta?.label} 종목 전체(${list.length}개)를 삭제하시겠습니까?`)) setList([]); }}
+              style={{ padding: "6px 12px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red, marginLeft: "auto" }}>
+              전체 삭제
+            </button>
+          )}
+        </div>
+      </div>
+      {/* 안내 */}
+      <div style={{ padding: "9px 14px", borderRadius: 6, background: `${C.accent}08`, border: `1px solid ${C.accent}18`, fontSize: "0.846em", color: C.muted, lineHeight: 1.8 }}>
+        💡 <strong style={{ color: C.accent }}>{meta?.label}</strong> — {meta?.desc}. 변경사항은 해당 탭의 다음 새로고침 시 즉시 반영됩니다.
       </div>
     </div>
   );
-  if (strategy === "ma") return (
-    <div style={S.panel} className="slide-in">
-      <PanelHeader label="이동평균 전략 설정" C={C} />
-      <div style={S.grid("1fr 1fr")}>
-        <InputField label="단기 이동평균" type="number" defaultValue={5} C={C} />
-        <InputField label="장기 이동평균" type="number" defaultValue={20} C={C} />
+}
+
+// ── 관리자 설정 탭 (사이드 네비 + 콘텐츠 영역) ──────────────────
+const ADMIN_SECTIONS = [
+  { id: "tickers", icon: "📋", label: "메뉴별 종목설정", desc: "각 메뉴 스캔 대상 종목 조회·추가·삭제" },
+  // 추후 섹션 추가 예시:
+  // { id: "alerts",  icon: "🔔", label: "알림 설정",     desc: "조건 충족 시 알림 규칙 관리" },
+  // { id: "api",     icon: "🔌", label: "API 설정",      desc: "KIS API 키·계좌 정보 관리" },
+];
+
+function AdminSettingsTab({ C, S, watchTickers, setWatchTickers, ywTickers, setYwTickers, themeTickers, setThemeTickers }) {
+  const [activeSection, setActiveSection] = useState("tickers");
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
+
+      {/* 헤더 배너 */}
+      <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 20px" }}>
+        <div style={{ fontFamily: FONTS.mono, fontSize: "1.154em", fontWeight: 700, color: C.accent, letterSpacing: 1 }}>⚙️ 관리자 설정</div>
+        <div style={{ fontSize: "0.846em", color: C.muted, marginTop: 3 }}>시스템 설정 및 종목·파라미터를 관리합니다</div>
       </div>
-      <div style={{ marginTop: 12, padding: 12, background: `${C.green}10`, border: `1px solid ${C.green}20`, borderRadius: 4, fontSize: "0.923em", color: C.muted }}>
-        💡 단기선 상향 돌파 → 매수 (골든크로스) / 하향 돌파 → 매도 (데드크로스)
+
+      {/* 본문: 사이드 네비 + 콘텐츠 */}
+      <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 14, alignItems: "start" }} className="admin-layout">
+
+        {/* 사이드 네비 */}
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "8px 14px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>설정 메뉴</span>
+          </div>
+          {ADMIN_SECTIONS.map(sec => {
+            const active = activeSection === sec.id;
+            return (
+              <div key={sec.id} onClick={() => setActiveSection(sec.id)}
+                style={{ padding: "11px 14px", cursor: "pointer", transition: "all 0.15s", borderBottom: `1px solid ${C.border}10`,
+                  background: active ? `${C.accent}10` : "transparent",
+                  borderLeft: `3px solid ${active ? C.accent : "transparent"}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "1em" }}>{sec.icon}</span>
+                  <div>
+                    <div style={{ fontSize: "0.923em", fontWeight: active ? 700 : 400, color: active ? C.accent : C.text }}>{sec.label}</div>
+                    <div style={{ fontSize: "0.692em", color: C.muted, marginTop: 1, lineHeight: 1.4 }}>{sec.desc}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 콘텐츠 영역 */}
+        <div>
+          {activeSection === "tickers" && (
+            <TickerSettingsPanel C={C} S={S}
+              watchTickers={watchTickers} setWatchTickers={setWatchTickers}
+              ywTickers={ywTickers}       setYwTickers={setYwTickers}
+              themeTickers={themeTickers} setThemeTickers={setThemeTickers}
+            />
+          )}
+          {/* 추후 섹션 추가 시 여기에 렌더 */}
+        </div>
       </div>
+
     </div>
   );
-  if (strategy === "bb") return (
-    <div style={S.panel} className="slide-in">
-      <PanelHeader label="볼린저밴드 전략 설정" C={C} />
-      <div style={S.grid("1fr 1fr")}>
-        <InputField label="기간" type="number" defaultValue={20} C={C} />
-        <InputField label="표준편차 배수" type="number" defaultValue={2} step={0.1} C={C} />
+}
+
+const KIS_BASE = "http://localhost:3001";
+
+const KIS_STRATEGIES = [
+  { id: "envelope", name: "엔벨로프 하한", desc: "MA 하한선 근접 시 매수·이탈 시 매도", icon: "📉" },
+  { id: "rsi",      name: "RSI 역추세",    desc: "과매도 진입 / 과매수 청산",           icon: "📊" },
+  { id: "ma",       name: "골든크로스",    desc: "단기/장기 이평선 교차 매매",           icon: "✂️" },
+  { id: "momentum", name: "거래량 모멘텀", desc: "거래량 급증 + 상승 돌파 추종",         icon: "🚀" },
+];
+
+function AutoTradeTab({ C, S, autoEnabled, setAutoEnabled, selectedStrategy, setSelectedStrategy,
+  stopLoss, setStopLoss, takeProfit, setTakeProfit,
+  rsiPeriod, setRsiPeriod, rsiBuy, setRsiBuy, rsiSell, setRsiSell,
+  orderType, setOrderType, orderQty, setOrderQty, orderPrice, setOrderPrice,
+  logs, setLogs, holdings, placeOrder, selectedStock }) {
+
+  const [autoTab, setAutoTab] = useState("strategy");   // strategy | tickers | order | position | log
+  const [kisStatus, setKisStatus]   = useState(null);   // null | "connecting" | "ok" | "error"
+  const [kisBalance, setKisBalance] = useState(null);
+  const [kisErrMsg,  setKisErrMsg]  = useState("");
+  const [orderTicker,  setOrderTicker]  = useState("");
+  const [orderSide,    setOrderSide]    = useState("buy");
+  const [maShort, setMaShort] = useState(5);
+  const [maLong,  setMaLong]  = useState(20);
+  const [envPeriod, setEnvPeriod2] = useState(20);
+  const [envKPct,   setEnvKPct2]   = useState(4);
+  const [momVolMul, setMomVolMul]  = useState(2);
+
+  // ── 자동매매 종목 설정 ─────────────────────────────────
+  const [autoTickers, setAutoTickers] = useState([
+    { code: "005930", name: "삼성전자",   qty: 10, enabled: true  },
+    { code: "000660", name: "SK하이닉스", qty: 5,  enabled: true  },
+    { code: "035420", name: "NAVER",      qty: 3,  enabled: false },
+  ]);
+  const [tickerInput, setTickerInput]   = useState("");
+  const [tickerName,  setTickerName]    = useState("");
+  const [tickerQty,   setTickerQty]     = useState(1);
+  const [tickerBudget, setTickerBudget] = useState(0);   // 1종목 예산(원), 0=수량기준
+  const [qtyMode,     setQtyMode]       = useState("qty"); // "qty" | "budget"
+
+  const addAutoTicker = () => {
+    const code = tickerInput.trim().replace(/\D/g, "");
+    if (!code) return;
+    if (autoTickers.find(t => t.code === code)) return;
+    setAutoTickers(prev => [...prev, { code, name: tickerName || code, qty: tickerQty, budget: tickerBudget, enabled: true }]);
+    setTickerInput(""); setTickerName(""); setTickerQty(1); setTickerBudget(0);
+  };
+  const removeAutoTicker = code => setAutoTickers(prev => prev.filter(t => t.code !== code));
+  const toggleAutoTicker = code => setAutoTickers(prev => prev.map(t => t.code === code ? { ...t, enabled: !t.enabled } : t));
+  const updateTickerQty  = (code, qty) => setAutoTickers(prev => prev.map(t => t.code === code ? { ...t, qty } : t));
+
+  // KIS 연결 상태 확인
+  const checkKisStatus = async () => {
+    setKisStatus("connecting");
+    setKisErrMsg("");
+    try {
+      const res = await fetch(`${KIS_BASE}/api/kis/balance`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setKisBalance(data);
+      setKisStatus("ok");
+    } catch (e) {
+      setKisStatus("error");
+      setKisErrMsg(e.message);
+    }
+  };
+
+  // 주문 실행
+  const submitOrder = async () => {
+    if (!orderTicker) return;
+    const body = { ticker: orderTicker, side: orderSide, qty: orderQty, price: orderType === "market" ? 0 : orderPrice, orderType };
+    try {
+      const res = await fetch(`${KIS_BASE}/api/kis/order`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      const msg = data.success ? `${orderSide === "buy" ? "매수" : "매도"} 주문 접수: ${orderTicker} ${orderQty}주 @ ${orderType === "market" ? "시장가" : orderPrice?.toLocaleString()}` : `주문 실패: ${data.message}`;
+      setLogs(prev => [{ time: fmtTime(new Date()), type: data.success ? orderSide : "error", msg }, ...prev]);
+    } catch (e) {
+      setLogs(prev => [{ time: fmtTime(new Date()), type: "error", msg: `주문 오류: ${e.message}` }, ...prev]);
+    }
+  };
+
+  const logTypeStyle = t => ({ buy: { color: C.green, bg: `${C.green}12` }, sell: { color: C.red, bg: `${C.red}12` }, info: { color: C.muted, bg: "transparent" }, error: { color: C.red, bg: `${C.red}18` } }[t] || { color: C.muted, bg: "transparent" });
+
+  const stratObj = KIS_STRATEGIES.find(s => s.id === selectedStrategy) || KIS_STRATEGIES[0];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
+
+      {/* ── 상단 배너: KIS 연결 상태 + 자동매매 ON/OFF ── */}
+      <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div>
+            <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.accent, letterSpacing: 1 }}>⚡ 자동매매</div>
+            <div style={{ fontSize: "0.846em", color: C.muted, marginTop: 2 }}>한국투자증권 KIS API 연동</div>
+          </div>
+          {/* KIS 연결 상태 */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: kisStatus === "ok" ? C.green : kisStatus === "error" ? C.red : kisStatus === "connecting" ? C.yellow : C.border, boxShadow: kisStatus === "ok" ? `0 0 6px ${C.green}` : "none" }} />
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: kisStatus === "ok" ? C.green : kisStatus === "error" ? C.red : C.muted }}>
+              {kisStatus === "ok" ? "연결됨" : kisStatus === "error" ? "연결 실패" : kisStatus === "connecting" ? "연결 중..." : "미연결"}
+            </span>
+            <button onClick={checkKisStatus} style={{ padding: "3px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontFamily: FONTS.mono }}>
+              {kisStatus === "connecting" ? "..." : "연결 확인"}
+            </button>
+          </div>
+          {kisStatus === "error" && <span style={{ fontSize: "0.769em", color: C.red }}>{kisErrMsg}</span>}
+        </div>
+        {/* 자동매매 ON/OFF */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {autoEnabled && <span className="blink" style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.green, background: `${C.green}12`, border: `1px solid ${C.green}30`, borderRadius: 4, padding: "3px 10px" }}>● 실행 중 — {stratObj.icon} {stratObj.name}</span>}
+          <span style={{ fontSize: "0.923em", color: C.text }}>자동매매</span>
+          <div onClick={() => setAutoEnabled(v => !v)} style={{ width: 48, height: 26, borderRadius: 13, cursor: "pointer", position: "relative", transition: "background 0.3s", background: autoEnabled ? C.green : C.border }}>
+            <div style={{ position: "absolute", top: 4, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.3s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)", left: autoEnabled ? 26 : 4 }} />
+          </div>
+        </div>
       </div>
-    </div>
-  );
-  if (strategy === "custom") return (
-    <div style={S.panel} className="slide-in">
-      <PanelHeader label="커스텀 조건 설정" C={C} />
-      <div style={S.grid("1fr 1fr")}>
-        {["매수 조건 1", "매수 조건 2", "매도 조건 1", "매도 조건 2"].map(label => (
-          <InputField key={label} label={label} type="text" placeholder="예: RSI < 30" C={C} />
+
+      {/* KIS 잔고 요약 */}
+      {kisBalance && (
+        <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
+          {[
+            ["예수금",   (kisBalance.deposit  ?? 0).toLocaleString() + "원", C.yellow],
+            ["평가금액", (kisBalance.evalAmt   ?? 0).toLocaleString() + "원", C.accent],
+            ["평가손익", (kisBalance.pnl       ?? 0).toLocaleString() + "원", (kisBalance.pnl ?? 0) >= 0 ? C.green : C.red],
+            ["수익률",   ((kisBalance.pnlRate  ?? 0).toFixed(2))      + "%",  (kisBalance.pnlRate ?? 0) >= 0 ? C.green : C.red],
+          ].map(([label, val, col]) => (
+            <div key={label} style={{ ...S.panel, textAlign: "center" }}>
+              <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 5, fontFamily: FONTS.mono }}>{label}</div>
+              <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.077em", color: col }}>{val}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── 서브 탭 ── */}
+      <div style={{ display: "flex", gap: 6, borderBottom: `1px solid ${C.border}`, paddingBottom: 0 }}>
+        {[["strategy","⚙️ 전략 설정"], ["tickers","🎯 종목 설정"], ["order","📋 수동 주문"], ["position","💼 포지션"], ["log","📜 로그"]].map(([id, label]) => (
+          <button key={id} onClick={() => setAutoTab(id)} style={{ padding: "7px 14px", borderRadius: "4px 4px 0 0", fontSize: "0.846em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${autoTab===id ? C.border : "transparent"}`, borderBottom: autoTab===id ? `2px solid ${C.accent}` : "1px solid transparent", background: autoTab===id ? C.panel : "transparent", color: autoTab===id ? C.accent : C.muted, fontWeight: autoTab===id ? 700 : 400, marginBottom: -1 }}>
+            {label}
+          </button>
         ))}
       </div>
+
+      {/* ── 전략 설정 탭 ── */}
+      {autoTab === "strategy" && (
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 14 }} className="auto-grid">
+
+          {/* 왼쪽: 전략 선택 + 리스크 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={S.panel}>
+              <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 12 }}>전략 선택</div>
+              {KIS_STRATEGIES.map(s => (
+                <div key={s.id} onClick={() => setSelectedStrategy(s.id)}
+                  style={{ padding: "10px 12px", borderRadius: 6, marginBottom: 6, cursor: "pointer", transition: "all 0.15s", border: `1px solid ${selectedStrategy===s.id ? C.accent : C.border}`, background: selectedStrategy===s.id ? `${C.accent}10` : "transparent", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: "1.2em" }}>{s.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "0.923em", color: selectedStrategy===s.id ? C.accent : C.text }}>{s.name}</div>
+                    <div style={{ fontSize: "0.769em", color: C.muted, marginTop: 1 }}>{s.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={S.panel}>
+              <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 12 }}>리스크 관리</div>
+              <SliderField label="손절 비율" value={stopLoss} min={1} max={20} onChange={setStopLoss} color={C.red} C={C} />
+              <SliderField label="익절 비율" value={takeProfit} min={1} max={30} onChange={setTakeProfit} color={C.green} C={C} />
+              <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 4, background: C.panelAlt, display: "flex", justifyContent: "space-between", fontSize: "0.846em" }}>
+                <span style={{ color: C.muted }}>손절</span><span style={{ fontFamily: FONTS.mono, color: C.red, fontWeight: 700 }}>-{stopLoss}%</span>
+                <span style={{ color: C.border }}>|</span>
+                <span style={{ color: C.muted }}>익절</span><span style={{ fontFamily: FONTS.mono, color: C.green, fontWeight: 700 }}>+{takeProfit}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 오른쪽: 전략별 파라미터 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={S.panel}>
+              <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 14 }}>{stratObj.icon} {stratObj.name} 파라미터</div>
+
+              {selectedStrategy === "rsi" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }} className="param-grid">
+                    <InputField label="RSI 기간" type="number" value={rsiPeriod} min={2} max={100} onChange={e => setRsiPeriod(+e.target.value)} C={C} />
+                    <InputField label="매수 기준 (RSI <)" type="number" value={rsiBuy} min={10} max={50} onChange={e => setRsiBuy(+e.target.value)} C={C} />
+                    <InputField label="매도 기준 (RSI >)" type="number" value={rsiSell} min={50} max={90} onChange={e => setRsiSell(+e.target.value)} C={C} />
+                  </div>
+                  {/* RSI 시각화 */}
+                  <div style={{ background: C.panelAlt, borderRadius: 6, padding: 14, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, marginBottom: 8 }}>RSI 시뮬레이션 미리보기</div>
+                    <svg width="100%" viewBox="0 0 500 80">
+                      <rect width="500" height="80" fill="transparent" />
+                      <line x1="0" y1={80 - rsiSell * 0.8} x2="500" y2={80 - rsiSell * 0.8} stroke={C.red} strokeWidth="0.8" strokeDasharray="4,4" opacity="0.7" />
+                      <line x1="0" y1={80 - rsiBuy * 0.8} x2="500" y2={80 - rsiBuy * 0.8} stroke={C.green} strokeWidth="0.8" strokeDasharray="4,4" opacity="0.7" />
+                      <polyline points={Array.from({length:50},(_,i)=>`${i*10},${80-(30+Math.sin(i*0.5)*25+Math.sin(i*0.2)*15)*0.8}`).join(" ")} fill="none" stroke={C.accent} strokeWidth="1.5" />
+                      <text x="4" y={80-rsiSell*0.8-4} fill={C.red} fontSize="8" fontFamily="monospace">매도 {rsiSell}</text>
+                      <text x="4" y={80-rsiBuy*0.8+11} fill={C.green} fontSize="8" fontFamily="monospace">매수 {rsiBuy}</text>
+                    </svg>
+                  </div>
+                  <div style={{ padding: "10px 14px", borderRadius: 4, background: `${C.accent}08`, border: `1px solid ${C.accent}20`, fontSize: "0.846em", color: C.muted, lineHeight: 1.7 }}>
+                    💡 <strong style={{color:C.accent}}>KIS API 연동:</strong> 실시간 체결가로 RSI 계산 → RSI &lt; {rsiBuy} 시 매수 주문, RSI &gt; {rsiSell} 시 전량 매도 주문 전송
+                  </div>
+                </div>
+              )}
+
+              {selectedStrategy === "ma" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <InputField label="단기 이동평균 (일)" type="number" value={maShort} min={2} max={60} onChange={e => setMaShort(+e.target.value)} C={C} />
+                    <InputField label="장기 이동평균 (일)" type="number" value={maLong} min={5} max={200} onChange={e => setMaLong(+e.target.value)} C={C} />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div style={{ padding: "12px 14px", borderRadius: 6, border: `1px solid ${C.green}30`, background: `${C.green}08`, textAlign: "center" }}>
+                      <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 4 }}>골든크로스 매수</div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.green, fontWeight: 700 }}>MA{maShort} ↑ MA{maLong}</div>
+                    </div>
+                    <div style={{ padding: "12px 14px", borderRadius: 6, border: `1px solid ${C.red}30`, background: `${C.red}08`, textAlign: "center" }}>
+                      <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 4 }}>데드크로스 매도</div>
+                      <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.red, fontWeight: 700 }}>MA{maShort} ↓ MA{maLong}</div>
+                    </div>
+                  </div>
+                  <div style={{ padding: "10px 14px", borderRadius: 4, background: `${C.accent}08`, border: `1px solid ${C.accent}20`, fontSize: "0.846em", color: C.muted, lineHeight: 1.7 }}>
+                    💡 <strong style={{color:C.accent}}>KIS API 연동:</strong> 분봉 데이터로 MA 계산 → 크로스 발생 시 즉시 주문 전송
+                  </div>
+                </div>
+              )}
+
+              {selectedStrategy === "envelope" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>이동평균 기간</div>
+                      <div style={{ display: "flex", gap: 5 }}>
+                        {[10,20,30,60].map(v => <button key={v} onClick={() => setEnvPeriod2(v)} style={{ flex:1, padding:"5px 0", borderRadius:4, fontSize:"0.846em", cursor:"pointer", fontFamily:FONTS.mono, border:`1px solid ${envPeriod===v?C.accent:C.border}`, background:envPeriod===v?`${C.accent}18`:"transparent", color:envPeriod===v?C.accent:C.muted }}>{v}일</button>)}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>밴드폭 (%)</div>
+                      <div style={{ display: "flex", gap: 5 }}>
+                        {[3,4,5,8].map(v => <button key={v} onClick={() => setEnvKPct2(v)} style={{ flex:1, padding:"5px 0", borderRadius:4, fontSize:"0.846em", cursor:"pointer", fontFamily:FONTS.mono, border:`1px solid ${envKPct===v?C.yellow:C.border}`, background:envKPct===v?`${C.yellow}18`:"transparent", color:envKPct===v?C.yellow:C.muted }}>±{v}%</button>)}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    {[["상한선", `MA${envPeriod} × ${1+envKPct/100}`, C.red], ["중심선", `MA${envPeriod}`, C.accent], ["하한선", `MA${envPeriod} × ${1-envKPct/100}`, C.green]].map(([lbl,val,col]) => (
+                      <div key={lbl} style={{ padding:"10px 12px", borderRadius:6, border:`1px solid ${col}30`, background:`${col}08`, textAlign:"center" }}>
+                        <div style={{ fontSize:"0.769em", color:C.muted, marginBottom:3 }}>{lbl}</div>
+                        <div style={{ fontFamily:FONTS.mono, fontSize:"0.769em", color:col, fontWeight:700 }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ padding: "10px 14px", borderRadius: 4, background: `${C.accent}08`, border: `1px solid ${C.accent}20`, fontSize: "0.846em", color: C.muted, lineHeight: 1.7 }}>
+                    💡 <strong style={{color:C.accent}}>KIS API 연동:</strong> 현재가가 하한선 터치 → 매수 / 중심선 복귀 → 매도
+                  </div>
+                </div>
+              )}
+
+              {selectedStrategy === "momentum" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>거래량 급증 기준 (평균 대비 배수)</div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {[1.5, 2, 3, 5].map(v => <button key={v} onClick={() => setMomVolMul(v)} style={{ flex:1, padding:"6px 0", borderRadius:4, fontSize:"0.923em", cursor:"pointer", fontFamily:FONTS.mono, border:`1px solid ${momVolMul===v?C.accent:C.border}`, background:momVolMul===v?`${C.accent}18`:"transparent", color:momVolMul===v?C.accent:C.muted }}>{v}×</button>)}
+                    </div>
+                  </div>
+                  <div style={{ padding: "12px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.panelAlt, fontSize: "0.846em", color: C.muted, lineHeight: 1.8 }}>
+                    <div style={{ color: C.text, fontWeight: 600, marginBottom: 6 }}>매수 조건</div>
+                    거래량 ≥ 20일 평균 × <span style={{color:C.accent,fontWeight:700}}>{momVolMul}배</span><br/>
+                    현재가 &gt; 직전 봉 고가 (상향 돌파)<br/>
+                    <div style={{ color: C.text, fontWeight: 600, margin: "8px 0 4px" }}>매도 조건</div>
+                    익절 <span style={{color:C.green,fontWeight:700}}>+{takeProfit}%</span> 또는 손절 <span style={{color:C.red,fontWeight:700}}>-{stopLoss}%</span>
+                  </div>
+                  <div style={{ padding: "10px 14px", borderRadius: 4, background: `${C.accent}08`, border: `1px solid ${C.accent}20`, fontSize: "0.846em", color: C.muted }}>
+                    💡 <strong style={{color:C.accent}}>KIS API 연동:</strong> 실시간 체결 스트림 감지 → 조건 충족 즉시 주문 전송
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 종목 설정 탭 ── */}
+      {autoTab === "tickers" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
+
+          {/* 상단 요약 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }} className="stat-grid-3">
+            {[
+              ["등록 종목", `${autoTickers.length}개`, C.accent],
+              ["활성 종목", `${autoTickers.filter(t=>t.enabled).length}개`, C.green],
+              ["비활성 종목", `${autoTickers.filter(t=>!t.enabled).length}개`, C.muted],
+            ].map(([label, val, col]) => (
+              <div key={label} style={{ ...S.panel, textAlign: "center" }}>
+                <div style={{ fontSize: "0.769em", color: C.muted, marginBottom: 5, fontFamily: FONTS.mono }}>{label}</div>
+                <div style={{ fontFamily: FONTS.mono, fontWeight: 700, fontSize: "1.154em", color: col }}>{val}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 14 }} className="auto-grid">
+
+            {/* 왼쪽: 종목 추가 */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={S.panel}>
+                <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 14 }}>+ 종목 추가</div>
+
+                {/* 종목코드 */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 5 }}>종목코드 <span style={{ color: C.red }}>*</span></div>
+                  <input value={tickerInput} onChange={e => setTickerInput(e.target.value.replace(/\D/g,""))} maxLength={6} placeholder="예: 005930" style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: `1px solid ${tickerInput.length===6 ? C.green : C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", outline: "none", boxSizing: "border-box", transition: "border 0.2s" }} />
+                </div>
+
+                {/* 종목명 */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 5 }}>종목명 (선택)</div>
+                  <input value={tickerName} onChange={e => setTickerName(e.target.value)} placeholder="예: 삼성전자" style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontSize: "0.923em", outline: "none", boxSizing: "border-box" }} />
+                </div>
+
+                {/* 수량 방식 */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>매매 수량 기준</div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    {[["qty","주수 지정"],["budget","예산 지정"]].map(([v,label]) => (
+                      <button key={v} onClick={() => setQtyMode(v)} style={{ flex: 1, padding: "6px 0", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${qtyMode===v ? C.accent : C.border}`, background: qtyMode===v ? `${C.accent}18` : "transparent", color: qtyMode===v ? C.accent : C.muted }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {qtyMode === "qty" ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button onClick={() => setTickerQty(v => Math.max(1, v-1))} style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, cursor: "pointer", fontSize: "1.1em" }}>−</button>
+                      <input type="number" value={tickerQty} min={1} onChange={e => setTickerQty(Math.max(1, +e.target.value))} style={{ flex: 1, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", textAlign: "center", outline: "none" }} />
+                      <button onClick={() => setTickerQty(v => v+1)} style={{ width: 30, height: 30, borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, cursor: "pointer", fontSize: "1.1em" }}>+</button>
+                      <span style={{ fontSize: "0.846em", color: C.muted }}>주</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input type="number" value={tickerBudget} min={0} step={10000} onChange={e => setTickerBudget(+e.target.value)} placeholder="0" style={{ flex: 1, padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", outline: "none" }} />
+                      <span style={{ fontSize: "0.846em", color: C.muted, whiteSpace: "nowrap" }}>원</span>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={addAutoTicker} disabled={tickerInput.length < 5}
+                  style={{ width: "100%", padding: "10px 0", borderRadius: 6, fontSize: "0.923em", fontWeight: 700, cursor: tickerInput.length >= 5 ? "pointer" : "not-allowed", border: `1px solid ${tickerInput.length >= 5 ? C.accent : C.border}`, background: tickerInput.length >= 5 ? `${C.accent}20` : "transparent", color: tickerInput.length >= 5 ? C.accent : C.muted, transition: "all 0.2s" }}>
+                  + 종목 추가
+                </button>
+              </div>
+
+              {/* 빠른 추가 — 주요 종목 */}
+              <div style={S.panel}>
+                <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 10 }}>빠른 추가</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {[["005930","삼성전자"],["000660","SK하이닉스"],["035420","NAVER"],["035720","카카오"],["005380","현대차"],["000270","기아"],["373220","LG에너지"],["207940","삼성바이오"],["068270","셀트리온"],["247540","에코프로비엠"]].map(([code, name]) => {
+                    const already = autoTickers.some(t => t.code === code);
+                    return (
+                      <button key={code} onClick={() => !already && setAutoTickers(prev => [...prev, { code, name, qty: 1, enabled: true }])}
+                        style={{ padding: "4px 10px", borderRadius: 20, fontSize: "0.769em", cursor: already ? "default" : "pointer", border: `1px solid ${already ? C.green : C.border}`, background: already ? `${C.green}12` : "transparent", color: already ? C.green : C.muted, transition: "all 0.15s" }}>
+                        {already ? "✓ " : ""}{name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* 오른쪽: 등록된 종목 리스트 */}
+            <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", alignSelf: "start" }}>
+              <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>등록 종목 목록</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setAutoTickers(prev => prev.map(t => ({ ...t, enabled: true })))}  style={{ padding: "3px 10px", borderRadius: 4, fontSize: "0.692em", cursor: "pointer", border: `1px solid ${C.green}40`, background: `${C.green}10`, color: C.green }}>전체 활성</button>
+                  <button onClick={() => setAutoTickers(prev => prev.map(t => ({ ...t, enabled: false })))} style={{ padding: "3px 10px", borderRadius: 4, fontSize: "0.692em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>전체 비활성</button>
+                </div>
+              </div>
+
+              {/* 헤더 */}
+              <div style={{ display: "grid", gridTemplateColumns: "44px 1fr 110px 80px 40px", padding: "7px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+                {["ON", "종목", "수량/예산", "코드", ""].map(h => (
+                  <span key={h} style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{h}</span>
+                ))}
+              </div>
+
+              {autoTickers.length === 0 && (
+                <div style={{ padding: 32, textAlign: "center", color: C.muted, fontSize: "0.923em" }}>등록된 종목이 없습니다</div>
+              )}
+
+              {autoTickers.map(t => (
+                <div key={t.code} style={{ display: "grid", gridTemplateColumns: "44px 1fr 110px 80px 40px", padding: "10px 16px", borderBottom: `1px solid ${C.border}15`, alignItems: "center", background: t.enabled ? "transparent" : `${C.panelAlt}60`, opacity: t.enabled ? 1 : 0.6, transition: "all 0.2s" }}>
+                  {/* 토글 */}
+                  <div onClick={() => toggleAutoTicker(t.code)} style={{ width: 36, height: 20, borderRadius: 10, cursor: "pointer", position: "relative", background: t.enabled ? C.green : C.border, transition: "background 0.25s", flexShrink: 0 }}>
+                    <div style={{ position: "absolute", top: 3, width: 14, height: 14, borderRadius: "50%", background: "white", transition: "left 0.25s", left: t.enabled ? 18 : 3, boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                  </div>
+                  {/* 종목명 */}
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "0.923em", color: t.enabled ? C.text : C.muted }}>{t.name}</div>
+                  </div>
+                  {/* 수량 인라인 편집 */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <input type="number" value={t.qty} min={1} onChange={e => updateTickerQty(t.code, Math.max(1, +e.target.value))}
+                      style={{ width: 56, padding: "4px 6px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.846em", textAlign: "center", outline: "none" }} />
+                    <span style={{ fontSize: "0.769em", color: C.muted }}>주</span>
+                  </div>
+                  {/* 코드 */}
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{t.code}</span>
+                  {/* 삭제 */}
+                  <button onClick={() => removeAutoTicker(t.code)} style={{ width: 24, height: 24, borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", fontSize: "0.9em", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>✕</button>
+                </div>
+              ))}
+
+              {autoTickers.length > 0 && (
+                <div style={{ padding: "8px 16px", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end" }}>
+                  <button onClick={() => setAutoTickers([])} style={{ padding: "4px 12px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red }}>전체 삭제</button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── 수동 주문 탭 ── */}
+      {autoTab === "order" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }} className="auto-grid">
+          {/* 주문 입력 */}
+          <div style={S.panel}>
+            <div style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1, marginBottom: 14 }}>수동 주문</div>
+            {/* 종목코드 */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 5 }}>종목코드</div>
+              <input value={orderTicker} onChange={e => setOrderTicker(e.target.value.toUpperCase())} placeholder="예: 005930" style={{ width: "100%", padding: "8px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "1em", outline: "none", boxSizing: "border-box" }} />
+            </div>
+            {/* 매수/매도 */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {[["buy","매수",C.green],["sell","매도",C.red]].map(([side,label,col]) => (
+                <button key={side} onClick={() => setOrderSide(side)} style={{ flex:1, padding:"8px 0", borderRadius:4, fontSize:"0.923em", cursor:"pointer", fontWeight:700, border:`1px solid ${orderSide===side?col:C.border}`, background:orderSide===side?`${col}20`:"transparent", color:orderSide===side?col:C.muted }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* 주문 유형 */}
+            <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+              {[["limit","지정가"],["market","시장가"]].map(([val,label]) => (
+                <button key={val} onClick={() => setOrderType(val)} style={{ flex:1, padding:"6px 0", borderRadius:4, fontSize:"0.846em", cursor:"pointer", border:`1px solid ${orderType===val?C.accent:C.border}`, background:orderType===val?`${C.accent}18`:"transparent", color:orderType===val?C.accent:C.muted }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <InputField label="수량 (주)" type="number" value={orderQty} onChange={e => setOrderQty(+e.target.value)} C={C} />
+            {orderType === "limit" && (
+              <div style={{ marginTop: 10 }}>
+                <InputField label="가격 (원)" type="number" value={orderPrice} onChange={e => setOrderPrice(+e.target.value)} C={C} />
+              </div>
+            )}
+            <div style={{ marginTop: 10, marginBottom: 14, padding: "8px 12px", borderRadius: 4, background: C.panelAlt, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.846em", color: C.muted }}>총 주문금액</span>
+              <span style={{ fontFamily: FONTS.mono, fontWeight: 700, color: C.yellow }}>{orderType === "market" ? "시장가" : fmt(orderQty * orderPrice) + "원"}</span>
+            </div>
+            <button onClick={submitOrder} disabled={!orderTicker}
+              style={{ width:"100%", padding:"11px 0", borderRadius:6, fontSize:"1em", fontWeight:700, cursor:orderTicker?"pointer":"not-allowed", border:`1px solid ${orderSide==="buy"?C.green:C.red}`, background:orderTicker?`${orderSide==="buy"?C.green:C.red}25`:`${C.border}20`, color:orderTicker?(orderSide==="buy"?C.green:C.red):C.muted }}>
+              {orderSide === "buy" ? "▲ 매수 주문" : "▼ 매도 주문"}
+            </button>
+          </div>
+          {/* 최근 주문 내역 */}
+          <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>최근 주문 로그</div>
+            <div style={{ maxHeight: 320, overflowY: "auto" }}>
+              {logs.length === 0 && <div style={{ padding: 20, textAlign: "center", color: C.muted, fontSize: "0.846em" }}>주문 내역 없음</div>}
+              {logs.map((log, i) => {
+                const st = logTypeStyle(log.type);
+                return (
+                  <div key={i} style={{ padding: "8px 16px", borderBottom: `1px solid ${C.border}10`, background: st.bg, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, whiteSpace: "nowrap", marginTop: 1 }}>{log.time}</span>
+                    <span style={{ fontSize: "0.846em", color: st.color, lineHeight: 1.5 }}>{log.msg}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 포지션 탭 ── */}
+      {autoTab === "position" && (
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "grid", gridTemplateColumns: "1fr 80px 90px 90px 90px 90px", gap: 8 }}>
+            {["종목","수량","평균단가","현재가","평가손익","수익률"].map(h => (
+              <span key={h} style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{h}</span>
+            ))}
+          </div>
+          {holdings.length === 0 && <div style={{ padding: 32, textAlign: "center", color: C.muted, fontSize: "0.923em" }}>보유 종목 없음</div>}
+          {holdings.map(h => {
+            const pnl = (h.currentPrice - h.avgPrice) * h.qty;
+            const pnlRate = ((h.currentPrice - h.avgPrice) / h.avgPrice) * 100;
+            const col = pnl >= 0 ? C.green : C.red;
+            return (
+              <div key={h.code} style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}15`, display: "grid", gridTemplateColumns: "1fr 80px 90px 90px 90px 90px", gap: 8, alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: C.text }}>{h.name}</div>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{h.code}</div>
+                </div>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text }}>{h.qty}주</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.muted }}>{h.avgPrice?.toLocaleString()}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, fontWeight: 600 }}>{h.currentPrice?.toLocaleString()}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: col, fontWeight: 700 }}>{pnl >= 0 ? "+" : ""}{pnl.toLocaleString()}</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: col, fontWeight: 700 }}>{pnlRate >= 0 ? "+" : ""}{pnlRate.toFixed(2)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── 로그 탭 ── */}
+      {autoTab === "log" && (
+        <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>실행 로그</span>
+            <button onClick={() => setLogs([])} style={{ padding: "3px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>전체 삭제</button>
+          </div>
+          <div style={{ maxHeight: 480, overflowY: "auto", fontFamily: FONTS.mono, fontSize: "0.846em" }}>
+            {logs.length === 0 && <div style={{ padding: 32, textAlign: "center", color: C.muted }}>로그 없음</div>}
+            {logs.map((log, i) => {
+              const st = logTypeStyle(log.type);
+              return (
+                <div key={i} style={{ padding: "7px 16px", borderBottom: `1px solid ${C.border}10`, background: st.bg, display: "flex", gap: 12, alignItems: "center" }}>
+                  <span style={{ color: C.muted, fontSize: "0.846em", whiteSpace: "nowrap" }}>{log.time}</span>
+                  <span style={{ width: 40, fontSize: "0.769em", fontWeight: 700, color: st.color }}>{log.type.toUpperCase()}</span>
+                  <span style={{ color: st.color }}>{log.msg}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
     </div>
   );
-  return null;
 }
+
+
+
 
 // ════════════════════════════════════════════════════════
 //  13. 메인 컴포넌트
@@ -2505,6 +3418,7 @@ export default function StockDashboard() {
   // ── 스캔 종목 리스트 (런타임 추가/삭제 가능) ─────────────
   const [watchTickers, setWatchTickers] = useState(WATCH_TICKERS);
   const [ywTickers,    setYwTickers]    = useState(YW_PICK_TICKERS);
+  const [themeTickers, setThemeTickers] = useState(THEME_TICKERS);
   const [selectedStock, setSelectedStock] = useState(MOCK_STOCKS[0]);
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [selectedStrategy, setSelectedStrategy] = useState("rsi");
@@ -2577,6 +3491,9 @@ export default function StockDashboard() {
   const [themeScanMode,    setThemeScanMode]    = useState("topvolume");   // "preset" | "topvolume"
   const [themeScanLimit,   setThemeScanLimit]   = useState(50);
   const [topVolumeError,   setTopVolumeError]   = useState(null);
+  const [kisExclCode,      setKisExclCode]      = useState("1111111111"); // 기본: 전체 제외
+  const [kisMinTv,         setKisMinTv]         = useState(0);    // 최소 거래대금 (억원), 0=제한없음
+  const [kisMinVol,        setKisMinVol]        = useState(0);    // 최소 거래량 (만주), 0=제한없음
 
   const loadThemeData = async () => {
     setThemeLoading(true);
@@ -2589,7 +3506,7 @@ export default function StockDashboard() {
     // ── 거래대금 상위 모드: KIS API에서 직접 데이터 수신 ──────────
     if (themeScanMode === "topvolume") {
       try {
-        const kisList = await fetchTopVolumeList();
+        const kisList = await fetchTopVolumeList(kisExclCode);
         // KIS 응답에 이미 price/changeRate/tradingValue 포함 → Yahoo 재조회 불필요
         setThemeStocks(kisList);
         setThemeLoadedCount(kisList.length);
@@ -2907,100 +3824,8 @@ export default function StockDashboard() {
           </div>
         )}
 
-        {/* ━━━ 자동매매 ━━━ */}
-        {tab === "menu_auto" && (
-          <div style={S.grid("280px 1fr")}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div style={S.panel}>
-                <PanelHeader label="자동매매 제어" C={C} />
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <span style={{ fontSize: "1em", color: C.text }}>자동매매 활성화</span>
-                  <div onClick={() => setAutoEnabled(v => !v)} style={{ width: 44, height: 24, borderRadius: 12, cursor: "pointer", position: "relative", transition: "background 0.3s", background: autoEnabled ? C.green : C.border }}>
-                    <div style={{ position: "absolute", top: 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.3s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)", left: autoEnabled ? 22 : 2 }} />
-                  </div>
-                </div>
-                {autoEnabled && <div className="blink" style={{ fontSize: "0.846em", color: C.green, textAlign: "center", padding: 6, background: `${C.green}10`, borderRadius: 4, border: `1px solid ${C.green}30` }}>● 자동매매 실행 중</div>}
-              </div>
-              <div style={S.panel}>
-                <PanelHeader label="전략 선택" C={C} />
-                {AUTO_STRATEGIES.map(s => (
-                  <div key={s.id} onClick={() => setSelectedStrategy(s.id)} style={{ padding: "10px 12px", borderRadius: 4, marginBottom: 6, cursor: "pointer", transition: "all 0.2s", border: `1px solid ${selectedStrategy === s.id ? C.accent : C.border}`, background: selectedStrategy === s.id ? `${C.accent}12` : "transparent" }}>
-                    <div style={{ fontWeight: 500, color: selectedStrategy === s.id ? C.accent : C.text }}>{s.name}</div>
-                    <div style={{ fontSize: "0.846em", color: C.muted, marginTop: 2 }}>{s.desc}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={S.panel}>
-                <PanelHeader label="리스크 관리" C={C} />
-                <SliderField label="손절 비율" value={stopLoss} min={1} max={20} onChange={setStopLoss} color={C.red} C={C} />
-                <SliderField label="익절 비율" value={takeProfit} min={1} max={30} onChange={setTakeProfit} color={C.green} C={C} />
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <StrategyPanel strategy={selectedStrategy} rsiPeriod={rsiPeriod} rsiBuy={rsiBuy} rsiSell={rsiSell} setRsiPeriod={setRsiPeriod} setRsiBuy={setRsiBuy} setRsiSell={setRsiSell} C={C} />
-              <div style={S.panel}>
-                <PanelHeader label="매매 대상 종목" C={C} />
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {MOCK_STOCKS.map(s => <div key={s.code} style={{ padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 20, fontSize: "0.923em", cursor: "pointer", color: C.muted }}>{s.name}</div>)}
-                  <div style={{ padding: "4px 10px", border: `1px dashed ${C.accent}`, borderRadius: 20, fontSize: "0.923em", cursor: "pointer", color: C.accent }}>+ 추가</div>
-                </div>
-              </div>
-              <div style={S.panel}>
-                <PanelHeader label="전략 성과 (시뮬레이션)" C={C} />
-                <div className="stat-grid-4" style={S.grid("repeat(4,1fr)")}>
-                  {[["총 수익률", "+12.4%", C.green], ["승률", "64%", C.accent], ["총 거래횟수", "128회", C.yellow], ["최대 낙폭", "-4.2%", C.red]].map(([label, val, col]) => (
-                    <div key={label} style={{ textAlign: "center", padding: 12, background: C.panelAlt, borderRadius: 4, border: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 6 }}>{label}</div>
-                      <div style={{ fontFamily: FONTS.mono, fontWeight: 600, fontSize: "1.231em", color: col }}>{val}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 주문 유형 + 호가창 */}
-              <div style={{ ...S.panel, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div>
-                  <PanelHeader label="주문 유형" C={C} />
-                  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                    {[["limit", "지정가"], ["market", "시장가"]].map(([val, label]) => (
-                      <button key={val} onClick={() => setOrderType(val)} style={{ flex: 1, padding: 6, cursor: "pointer", borderRadius: 4, fontSize: "0.923em", border: `1px solid ${orderType === val ? C.accent : C.border}`, background: orderType === val ? `${C.accent}20` : "transparent", color: orderType === val ? C.accent : C.muted }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
-                    <InputField label="수량" type="number" value={orderQty} onChange={e => setOrderQty(+e.target.value)} C={C} />
-                    <InputField label="가격" type="number" value={orderPrice} onChange={e => setOrderPrice(+e.target.value)} C={C} />
-                  </div>
-                  <div style={{ fontSize: "0.846em", color: C.muted, marginBottom: 10 }}>
-                    총 주문금액: <span style={{ color: C.yellow, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(orderQty * orderPrice)}원</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {[["buy", "매수", C.green], ["sell", "매도", C.red]].map(([side, label, col]) => (
-                      <button key={side} onClick={() => placeOrder(side)} style={{ flex: 1, padding: 10, cursor: "pointer", fontWeight: 700, fontSize: "1em", borderRadius: 4, background: `${col}20`, border: `1px solid ${col}`, color: col }}>{label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <PanelHeader label="호가창" C={C} />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`ask-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.red}10`, marginBottom: 1, borderRadius: 2, fontSize: "0.846em" }}>
-                      <span style={{ color: C.red, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price + (5 - i) * 100)}</span>
-                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
-                    </div>
-                  ))}
-                  <div style={{ height: 1, background: C.accent, margin: "4px 0", opacity: 0.4 }} />
-                  {[...Array(5)].map((_, i) => (
-                    <div key={`bid-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", background: `${C.green}10`, marginBottom: 1, borderRadius: 2, fontSize: "0.846em" }}>
-                      <span style={{ color: C.green, fontFamily: FONTS.mono, fontWeight: 600 }}>{fmt(selectedStock.price - i * 100)}</span>
-                      <span style={{ color: C.muted }}>{(Math.random() * 5000 | 0).toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ━━━ 자동매매 (KIS API) ━━━ */}
+        {tab === "menu_auto" && <AutoTradeTab C={C} S={S} autoEnabled={autoEnabled} setAutoEnabled={setAutoEnabled} selectedStrategy={selectedStrategy} setSelectedStrategy={setSelectedStrategy} stopLoss={stopLoss} setStopLoss={setStopLoss} takeProfit={takeProfit} setTakeProfit={setTakeProfit} rsiPeriod={rsiPeriod} setRsiPeriod={setRsiPeriod} rsiBuy={rsiBuy} setRsiBuy={setRsiBuy} rsiSell={rsiSell} setRsiSell={setRsiSell} orderType={orderType} setOrderType={setOrderType} orderQty={orderQty} setOrderQty={setOrderQty} orderPrice={orderPrice} setOrderPrice={setOrderPrice} logs={logs} setLogs={setLogs} holdings={holdings} placeOrder={placeOrder} selectedStock={selectedStock} />}
 
         {/* ━━━ 종가베팅 ━━━ */}
         {tab === "menu_closing" && <ClosingTab C={C} stocks={closingStocks} loading={closingLoading} loadedCount={closingLoadedCount} error={closingError} lastUpdated={closingLastUpdated} onReload={loadClosingData} watchTickersList={watchTickers} onAddWatchTicker={isAdmin ? t => setWatchTickers(prev => [...prev, t]) : undefined} onDeleteWatchTicker={isAdmin ? ticker => setWatchTickers(prev => prev.filter(x => x.ticker !== ticker)) : undefined} />}
@@ -3009,7 +3834,7 @@ export default function StockDashboard() {
         {tab === "menu_yw-pick" && <YwPickTab C={C} stocks={ywStocks} loading={ywLoading} loadedCount={ywLoadedCount} error={ywError} lastUpdated={ywLastUpdated} onReload={loadYwData} ywPickTickers={ywTickers} onAddYwTicker={isAdmin ? t => setYwTickers(prev => [...prev, t]) : undefined} onDeleteYwTicker={isAdmin ? ticker => setYwTickers(prev => prev.filter(x => x.ticker !== ticker)) : undefined} />}
 
         {/* ━━━ 주도/테마 ━━━ */}
-        {tab === "menu_theme" && <ThemeTab C={C} stocks={themeStocks} loading={themeLoading} loadedCount={themeLoadedCount} lastUpdated={themeLastUpdated} onReload={loadThemeData} scanMode={themeScanMode} onChangeScanMode={mode => { setThemeScanMode(mode); setThemeFetched(false); setThemeStocks([]); }} topVolumeError={topVolumeError} />}
+        {tab === "menu_theme" && <ThemeTab C={C} stocks={themeStocks} loading={themeLoading} loadedCount={themeLoadedCount} lastUpdated={themeLastUpdated} onReload={loadThemeData} scanMode={themeScanMode} onChangeScanMode={mode => { setThemeScanMode(mode); setThemeFetched(false); setThemeStocks([]); }} topVolumeError={topVolumeError} kisExclCode={kisExclCode} onChangeExclCode={setKisExclCode} kisMinTv={kisMinTv} onChangeMinTv={setKisMinTv} kisMinVol={kisMinVol} onChangeMinVol={setKisMinVol} />}
 
         {/* ━━━ 포트폴리오 ━━━ */}
         {tab === "menu_portfolio" && (
@@ -3070,6 +3895,15 @@ export default function StockDashboard() {
               })}
             </div>
           </div>
+        )}
+
+        {/* ━━━ 관리자 설정 ━━━ */}
+        {tab === "menu_admin" && (
+          <AdminSettingsTab C={C} S={S}
+            watchTickers={watchTickers} setWatchTickers={setWatchTickers}
+            ywTickers={ywTickers}       setYwTickers={setYwTickers}
+            themeTickers={themeTickers} setThemeTickers={setThemeTickers}
+          />
         )}
       </main>
 
