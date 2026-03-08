@@ -1,9 +1,9 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.6.1";
+const APP_VERSION  = "1.6.2";
 const APP_DATE     = "2026-03-08";
 
 // ════════════════════════════════════════════════════════
@@ -107,136 +107,136 @@ const AUTO_STRATEGIES = [
 
 const WATCH_TICKERS = [
   // ── 반도체·IT ──────────────────────────────────────
-  { ticker: "005930.KS", name: "삼성전자" },
-  { ticker: "000660.KS", name: "SK하이닉스" },
-  { ticker: "009150.KS", name: "삼성전기" },
-  { ticker: "066570.KS", name: "LG전자" },
+  { ticker: "005930", market_type: "KOSPI", name: "삼성전자" },
+  { ticker: "000660", market_type: "KOSPI", name: "SK하이닉스" },
+  { ticker: "009150", market_type: "KOSPI", name: "삼성전기" },
+  { ticker: "066570", market_type: "KOSPI", name: "LG전자" },
   // ── 인터넷·플랫폼·게임 ────────────────────────────
-  { ticker: "035420.KS", name: "NAVER" },
-  { ticker: "035720.KS", name: "카카오" },
-  { ticker: "259960.KS", name: "크래프톤" },
-  { ticker: "036570.KS", name: "엔씨소프트" },
-  { ticker: "251270.KS", name: "넷마블" },
+  { ticker: "035420", market_type: "KOSPI", name: "NAVER" },
+  { ticker: "035720", market_type: "KOSPI", name: "카카오" },
+  { ticker: "259960", market_type: "KOSPI", name: "크래프톤" },
+  { ticker: "036570", market_type: "KOSPI", name: "엔씨소프트" },
+  { ticker: "251270", market_type: "KOSPI", name: "넷마블" },
   // ── 자동차·부품 ─────────────────────────────────────
-  { ticker: "005380.KS", name: "현대차" },
-  { ticker: "000270.KS", name: "기아" },
-  { ticker: "012330.KS", name: "현대모비스" },
+  { ticker: "005380", market_type: "KOSPI", name: "현대차" },
+  { ticker: "000270", market_type: "KOSPI", name: "기아" },
+  { ticker: "012330", market_type: "KOSPI", name: "현대모비스" },
   // ── 2차전지·에너지 ──────────────────────────────────
-  { ticker: "373220.KS", name: "LG에너지솔루션" },
-  { ticker: "006400.KS", name: "삼성SDI" },
-  { ticker: "051910.KS", name: "LG화학" },
-  { ticker: "247540.KS", name: "에코프로비엠" },
-  { ticker: "096770.KS", name: "SK이노베이션" },
-  { ticker: "010950.KS", name: "S-Oil" },
+  { ticker: "373220", market_type: "KOSPI", name: "LG에너지솔루션" },
+  { ticker: "006400", market_type: "KOSPI", name: "삼성SDI" },
+  { ticker: "051910", market_type: "KOSPI", name: "LG화학" },
+  { ticker: "247540", market_type: "KOSPI", name: "에코프로비엠" },
+  { ticker: "096770", market_type: "KOSPI", name: "SK이노베이션" },
+  { ticker: "010950", market_type: "KOSPI", name: "S-Oil" },
   // ── 바이오·헬스케어 ─────────────────────────────────
-  { ticker: "207940.KS", name: "삼성바이오로직스" },
-  { ticker: "068270.KS", name: "셀트리온" },
-  { ticker: "128940.KS", name: "한미약품" },
-  { ticker: "000100.KS", name: "유한양행" },
-  { ticker: "326030.KS", name: "SK바이오팜" },
+  { ticker: "207940", market_type: "KOSPI", name: "삼성바이오로직스" },
+  { ticker: "068270", market_type: "KOSPI", name: "셀트리온" },
+  { ticker: "128940", market_type: "KOSPI", name: "한미약품" },
+  { ticker: "000100", market_type: "KOSPI", name: "유한양행" },
+  { ticker: "326030", market_type: "KOSPI", name: "SK바이오팜" },
   // ── 금융 ───────────────────────────────────────────
-  { ticker: "105560.KS", name: "KB금융" },
-  { ticker: "055550.KS", name: "신한지주" },
-  { ticker: "086790.KS", name: "하나금융지주" },
-  { ticker: "316140.KS", name: "우리금융지주" },
-  { ticker: "000810.KS", name: "삼성화재" },
+  { ticker: "105560", market_type: "KOSPI", name: "KB금융" },
+  { ticker: "055550", market_type: "KOSPI", name: "신한지주" },
+  { ticker: "086790", market_type: "KOSPI", name: "하나금융지주" },
+  { ticker: "316140", market_type: "KOSPI", name: "우리금융지주" },
+  { ticker: "000810", market_type: "KOSPI", name: "삼성화재" },
   // ── 철강·소재·화학 ──────────────────────────────────
-  { ticker: "005490.KS", name: "POSCO홀딩스" },
-  { ticker: "011170.KS", name: "롯데케미칼" },
-  { ticker: "004020.KS", name: "현대제철" },
+  { ticker: "005490", market_type: "KOSPI", name: "POSCO홀딩스" },
+  { ticker: "011170", market_type: "KOSPI", name: "롯데케미칼" },
+  { ticker: "004020", market_type: "KOSPI", name: "현대제철" },
   // ── 건설·중공업·방산 ────────────────────────────────
-  { ticker: "012450.KS", name: "한화에어로스페이스" },
-  { ticker: "047810.KS", name: "한국항공우주" },
-  { ticker: "034020.KS", name: "두산에너빌리티" },
-  { ticker: "000720.KS", name: "현대건설" },
+  { ticker: "012450", market_type: "KOSPI", name: "한화에어로스페이스" },
+  { ticker: "047810", market_type: "KOSPI", name: "한국항공우주" },
+  { ticker: "034020", market_type: "KOSPI", name: "두산에너빌리티" },
+  { ticker: "000720", market_type: "KOSPI", name: "현대건설" },
   // ── 유통·통신·운송 ──────────────────────────────────
-  { ticker: "017670.KS", name: "SK텔레콤" },
-  { ticker: "030200.KS", name: "KT" },
-  { ticker: "003490.KS", name: "대한항공" },
-  { ticker: "011200.KS", name: "HMM" },
-  { ticker: "033780.KS", name: "KT&G" },
+  { ticker: "017670", market_type: "KOSPI", name: "SK텔레콤" },
+  { ticker: "030200", market_type: "KOSPI", name: "KT" },
+  { ticker: "003490", market_type: "KOSPI", name: "대한항공" },
+  { ticker: "011200", market_type: "KOSPI", name: "HMM" },
+  { ticker: "033780", market_type: "KOSPI", name: "KT&G" },
 ];
 
 // YW's Pick 전용 스캔 종목 — WATCH_TICKERS + 추가 70종목 (코스피/코스닥 대형주)
 const YW_PICK_TICKERS = [
   ...WATCH_TICKERS,
   // ── 추가: 반도체·디스플레이 ────────────────────────
-  { ticker: "034730.KS", name: "SK스퀘어" },
-  { ticker: "000990.KS", name: "DB하이텍" },
-  { ticker: "336370.KS", name: "솔루스첨단소재" },
-  { ticker: "078600.KS", name: "대주전자재료" },
+  { ticker: "034730", market_type: "KOSPI", name: "SK스퀘어" },
+  { ticker: "000990", market_type: "KOSPI", name: "DB하이텍" },
+  { ticker: "336370", market_type: "KOSPI", name: "솔루스첨단소재" },
+  { ticker: "078600", market_type: "KOSPI", name: "대주전자재료" },
   // ── 추가: 게임·엔터 ────────────────────────────────
-  { ticker: "251270.KS", name: "넷마블" },
-  { ticker: "041510.KS", name: "에스엠" },
-  { ticker: "035900.KS", name: "JYP Ent." },
-  { ticker: "122870.KS", name: "와이지엔터테인먼트" },
+  { ticker: "251270", market_type: "KOSPI", name: "넷마블" },
+  { ticker: "041510", market_type: "KOSPI", name: "에스엠" },
+  { ticker: "035900", market_type: "KOSPI", name: "JYP Ent." },
+  { ticker: "122870", market_type: "KOSPI", name: "와이지엔터테인먼트" },
   // ── 추가: 자동차 부품·모빌리티 ─────────────────────
-  { ticker: "011210.KS", name: "현대위아" },
-  { ticker: "018880.KS", name: "한온시스템" },
-  { ticker: "204320.KS", name: "HL만도" },
+  { ticker: "011210", market_type: "KOSPI", name: "현대위아" },
+  { ticker: "018880", market_type: "KOSPI", name: "한온시스템" },
+  { ticker: "204320", market_type: "KOSPI", name: "HL만도" },
   // ── 추가: 2차전지 소재·장비 ────────────────────────
-  { ticker: "006490.KS", name: "LS MnM" },
-  { ticker: "382800.KS", name: "엔켐" },
-  { ticker: "450080.KS", name: "에코프로" },
-  { ticker: "272290.KS", name: "이노메트리" },
+  { ticker: "006490", market_type: "KOSPI", name: "LS MnM" },
+  { ticker: "382800", market_type: "KOSPI", name: "엔켐" },
+  { ticker: "450080", market_type: "KOSPI", name: "에코프로" },
+  { ticker: "272290", market_type: "KOSPI", name: "이노메트리" },
   // ── 추가: 바이오 ───────────────────────────────────
-  { ticker: "145020.KS", name: "휴젤" },
-  { ticker: "196170.KS", name: "알테오젠" },
-  { ticker: "009420.KS", name: "한미사이언스" },
-  { ticker: "056090.KS", name: "이노테라피" },
+  { ticker: "145020", market_type: "KOSPI", name: "휴젤" },
+  { ticker: "196170", market_type: "KOSPI", name: "알테오젠" },
+  { ticker: "009420", market_type: "KOSPI", name: "한미사이언스" },
+  { ticker: "056090", market_type: "KOSPI", name: "이노테라피" },
   // ── 추가: 금융·증권 ────────────────────────────────
-  { ticker: "032830.KS", name: "삼성생명" },
-  { ticker: "071050.KS", name: "한국금융지주" },
-  { ticker: "030610.KS", name: "교보증권" },
-  { ticker: "003540.KS", name: "대신증권" },
+  { ticker: "032830", market_type: "KOSPI", name: "삼성생명" },
+  { ticker: "071050", market_type: "KOSPI", name: "한국금융지주" },
+  { ticker: "030610", market_type: "KOSPI", name: "교보증권" },
+  { ticker: "003540", market_type: "KOSPI", name: "대신증권" },
   // ── 추가: 철강·소재·화학 ───────────────────────────
-  { ticker: "006260.KS", name: "LS" },
-  { ticker: "010060.KS", name: "OCI홀딩스" },
-  { ticker: "069260.KS", name: "휴켐스" },
-  { ticker: "004000.KS", name: "롯데정밀화학" },
+  { ticker: "006260", market_type: "KOSPI", name: "LS" },
+  { ticker: "010060", market_type: "KOSPI", name: "OCI홀딩스" },
+  { ticker: "069260", market_type: "KOSPI", name: "휴켐스" },
+  { ticker: "004000", market_type: "KOSPI", name: "롯데정밀화학" },
   // ── 추가: 건설·인프라 ──────────────────────────────
-  { ticker: "000880.KS", name: "한화" },
-  { ticker: "007070.KS", name: "GS리테일" },
-  { ticker: "006360.KS", name: "GS건설" },
+  { ticker: "000880", market_type: "KOSPI", name: "한화" },
+  { ticker: "007070", market_type: "KOSPI", name: "GS리테일" },
+  { ticker: "006360", market_type: "KOSPI", name: "GS건설" },
   // ── 추가: 유통·소비 ────────────────────────────────
-  { ticker: "028260.KS", name: "삼성물산" },
-  { ticker: "004170.KS", name: "신세계" },
-  { ticker: "139480.KS", name: "이마트" },
-  { ticker: "023530.KS", name: "롯데쇼핑" },
-  { ticker: "069960.KS", name: "현대백화점" },
+  { ticker: "028260", market_type: "KOSPI", name: "삼성물산" },
+  { ticker: "004170", market_type: "KOSPI", name: "신세계" },
+  { ticker: "139480", market_type: "KOSPI", name: "이마트" },
+  { ticker: "023530", market_type: "KOSPI", name: "롯데쇼핑" },
+  { ticker: "069960", market_type: "KOSPI", name: "현대백화점" },
   // ── 추가: 통신·미디어 ──────────────────────────────
-  { ticker: "032640.KS", name: "LG유플러스" },
-  { ticker: "036460.KS", name: "한국가스공사" },
-  { ticker: "015760.KS", name: "한국전력" },
+  { ticker: "032640", market_type: "KOSPI", name: "LG유플러스" },
+  { ticker: "036460", market_type: "KOSPI", name: "한국가스공사" },
+  { ticker: "015760", market_type: "KOSPI", name: "한국전력" },
   // ── 추가: 운송·물류 ────────────────────────────────
-  { ticker: "086280.KS", name: "현대글로비스" },
-  { ticker: "000120.KS", name: "CJ대한통운" },
+  { ticker: "086280", market_type: "KOSPI", name: "현대글로비스" },
+  { ticker: "000120", market_type: "KOSPI", name: "CJ대한통운" },
   // ── 추가: 음식료·생활 ──────────────────────────────
-  { ticker: "097950.KS", name: "CJ제일제당" },
-  { ticker: "001040.KS", name: "CJ" },
-  { ticker: "010130.KS", name: "고려아연" },
-  { ticker: "008770.KS", name: "호텔신라" },
+  { ticker: "097950", market_type: "KOSPI", name: "CJ제일제당" },
+  { ticker: "001040", market_type: "KOSPI", name: "CJ" },
+  { ticker: "010130", market_type: "KOSPI", name: "고려아연" },
+  { ticker: "008770", market_type: "KOSPI", name: "호텔신라" },
   // ── 코스닥 대형주 ───────────────────────────────────
-  { ticker: "091990.KQ", name: "셀트리온헬스케어" },
-  { ticker: "263750.KQ", name: "펄어비스" },
-  { ticker: "293490.KQ", name: "카카오게임즈" },
-  { ticker: "357780.KQ", name: "솔브레인" },
-  { ticker: "140610.KQ", name: "에코프로에이치엔" },
-  { ticker: "214150.KQ", name: "클래시스" },
-  { ticker: "039030.KQ", name: "이오테크닉스" },
-  { ticker: "089490.KQ", name: "세경하이테크" },
+  { ticker: "091990", market_type: "KOSDAQ", name: "셀트리온헬스케어" },
+  { ticker: "263750", market_type: "KOSDAQ", name: "펄어비스" },
+  { ticker: "293490", market_type: "KOSDAQ", name: "카카오게임즈" },
+  { ticker: "357780", market_type: "KOSDAQ", name: "솔브레인" },
+  { ticker: "140610", market_type: "KOSDAQ", name: "에코프로에이치엔" },
+  { ticker: "214150", market_type: "KOSDAQ", name: "클래시스" },
+  { ticker: "039030", market_type: "KOSDAQ", name: "이오테크닉스" },
+  { ticker: "089490", market_type: "KOSDAQ", name: "세경하이테크" },
   // ── 추가: 엄마픽 ───────────────────────────────────
-  { ticker: "042700.KS", name: "한미반도체" },
-  { ticker: "277810.KQ", name: "레인보우로보틱스" },
-  { ticker: "058470.KQ", name: "리노공업" },
-  { ticker: "240810.KQ", name: "원익IPS" },
-  { ticker: "000720.KS", name: "현대건설" },
-  { ticker: "006400.KS", name: "삼성SDI" },
-  { ticker: "034020.KS", name: "두산에너빌리티" },
-  { ticker: "005380.KS", name: "현대차" },
-  { ticker: "298380.KQ", name: "에이비엘바이오" },
-  { ticker: "950160.KQ", name: "코오롱티슈진" },
-  { ticker: "310210.KQ", name: "보로노이" },
+  { ticker: "042700", market_type: "KOSPI", name: "한미반도체" },
+  { ticker: "277810", market_type: "KOSDAQ", name: "레인보우로보틱스" },
+  { ticker: "058470", market_type: "KOSDAQ", name: "리노공업" },
+  { ticker: "240810", market_type: "KOSDAQ", name: "원익IPS" },
+  { ticker: "000720", market_type: "KOSPI", name: "현대건설" },
+  { ticker: "006400", market_type: "KOSPI", name: "삼성SDI" },
+  { ticker: "034020", market_type: "KOSPI", name: "두산에너빌리티" },
+  { ticker: "005380", market_type: "KOSPI", name: "현대차" },
+  { ticker: "298380", market_type: "KOSDAQ", name: "에이비엘바이오" },
+  { ticker: "950160", market_type: "KOSDAQ", name: "코오롱티슈진" },
+  { ticker: "310210", market_type: "KOSDAQ", name: "보로노이" },
 ].filter((v, i, a) => a.findIndex(t => t.ticker === v.ticker) === i); // 중복 제거
 
 // ════════════════════════════════════════════════════════
@@ -253,13 +253,13 @@ const MOCK_STOCKS = [
 ];
 
 const MOCK_CLOSING = [
-  { ticker: "005930.KS", name: "삼성전자", price: 74800, changeRate: 1.63, volume: 18432100, volRate: 312, tradingValue: 74800 * 18432100, rsi: 42, bb: "하단근접", bbPos: 22, score: 88, signal: "강력매수", reason: "거래량 급증 · RSI 저점 · 볼린저 하단" },
-  { ticker: "000660.KS", name: "SK하이닉스", price: 189500, changeRate: -1.30, volume: 5821300, volRate: 185, tradingValue: 189500 * 5821300, rsi: 34, bb: "하단이탈", bbPos: 10, score: 76, signal: "매수", reason: "RSI 과매도 · 볼린저 하단 이탈" },
-  { ticker: "035420.KS", name: "NAVER", price: 198000, changeRate: 1.80, volume: 1243800, volRate: 224, tradingValue: 198000 * 1243800, rsi: 58, bb: "중립", bbPos: 55, score: 65, signal: "관망", reason: "거래량 증가 but RSI 중립" },
-  { ticker: "247540.KS", name: "에코프로비엠", price: 98200, changeRate: 4.21, volume: 9823400, volRate: 541, tradingValue: 98200 * 9823400, rsi: 71, bb: "상단돌파", bbPos: 97, score: 55, signal: "주의", reason: "거래량 폭증 but RSI 과매수" },
-  { ticker: "373220.KS", name: "LG에너지솔루션", price: 312000, changeRate: 2.10, volume: 2341200, volRate: 198, tradingValue: 312000 * 2341200, rsi: 52, bb: "중립", bbPos: 48, score: 70, signal: "매수", reason: "거래량 증가 · 중기 지지선 근접" },
-  { ticker: "207940.KS", name: "삼성바이오로직스", price: 782000, changeRate: -0.51, volume: 412300, volRate: 143, tradingValue: 782000 * 412300, rsi: 48, bb: "중립", bbPos: 40, score: 60, signal: "관망", reason: "특이 신호 없음" },
-  { ticker: "068270.KS", name: "셀트리온", price: 158500, changeRate: 3.45, volume: 7234100, volRate: 389, tradingValue: 158500 * 7234100, rsi: 63, bb: "상단근접", bbPos: 78, score: 82, signal: "매수", reason: "거래량 급증 · 강한 상승 모멘텀" },
+  { ticker: "005930", market_type: "KOSPI", name: "삼성전자", price: 74800, changeRate: 1.63, volume: 18432100, volRate: 312, tradingValue: 74800 * 18432100, rsi: 42, bb: "하단근접", bbPos: 22, score: 88, signal: "강력매수", reason: "거래량 급증 · RSI 저점 · 볼린저 하단" },
+  { ticker: "000660", market_type: "KOSPI", name: "SK하이닉스", price: 189500, changeRate: -1.30, volume: 5821300, volRate: 185, tradingValue: 189500 * 5821300, rsi: 34, bb: "하단이탈", bbPos: 10, score: 76, signal: "매수", reason: "RSI 과매도 · 볼린저 하단 이탈" },
+  { ticker: "035420", market_type: "KOSPI", name: "NAVER", price: 198000, changeRate: 1.80, volume: 1243800, volRate: 224, tradingValue: 198000 * 1243800, rsi: 58, bb: "중립", bbPos: 55, score: 65, signal: "관망", reason: "거래량 증가 but RSI 중립" },
+  { ticker: "247540", market_type: "KOSPI", name: "에코프로비엠", price: 98200, changeRate: 4.21, volume: 9823400, volRate: 541, tradingValue: 98200 * 9823400, rsi: 71, bb: "상단돌파", bbPos: 97, score: 55, signal: "주의", reason: "거래량 폭증 but RSI 과매수" },
+  { ticker: "373220", market_type: "KOSPI", name: "LG에너지솔루션", price: 312000, changeRate: 2.10, volume: 2341200, volRate: 198, tradingValue: 312000 * 2341200, rsi: 52, bb: "중립", bbPos: 48, score: 70, signal: "매수", reason: "거래량 증가 · 중기 지지선 근접" },
+  { ticker: "207940", market_type: "KOSPI", name: "삼성바이오로직스", price: 782000, changeRate: -0.51, volume: 412300, volRate: 143, tradingValue: 782000 * 412300, rsi: 48, bb: "중립", bbPos: 40, score: 60, signal: "관망", reason: "특이 신호 없음" },
+  { ticker: "068270", market_type: "KOSPI", name: "셀트리온", price: 158500, changeRate: 3.45, volume: 7234100, volRate: 389, tradingValue: 158500 * 7234100, rsi: 63, bb: "상단근접", bbPos: 78, score: 82, signal: "매수", reason: "거래량 급증 · 강한 상승 모멘텀" },
 ];
 
 // ════════════════════════════════════════════════════════
@@ -361,7 +361,17 @@ function calcEnvelope(closes, period = 20, kPct = 5) {
 //  5. Yahoo Finance API
 // ════════════════════════════════════════════════════════
 
-async function fetchYahooQuote(ticker) {
+// 종목코드 + market_type → Yahoo ticker 변환
+// market_type: "KOSPI" → .KS / "KOSDAQ" → .KQ / 그 외 그대로
+function toYahooTicker(ticker, market_type) {
+  if (ticker.includes(".")) return ticker; // 이미 suffix 포함
+  if (market_type === "KOSPI")  return `${ticker}.KS`;
+  if (market_type === "KOSDAQ") return `${ticker}.KQ`;
+  return ticker;
+}
+
+async function fetchYahooQuote(ticker, market_type) {
+  const yahooTicker = toYahooTicker(ticker, market_type);
   /*
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=3mo`;
   const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
@@ -370,10 +380,10 @@ async function fetchYahooQuote(ticker) {
   */
 
   //로컬 백엔드 사용
-  //const myProxyUrl = `http://localhost:3001/api/yahoo?ticker=${ticker}`;
+  //const myProxyUrl = `http://localhost:3001/api/yahoo?ticker=${yahooTicker}`;
   //무료 클라우드 render 사용
-  //const myProxyUrl = `https://trade-backend-3o2e.onrender.com/api/yahoo?ticker=${ticker}`;
-  const myProxyUrl = `${API_BASE}/api/yahoo?ticker=${ticker}`;
+  //const myProxyUrl = `https://trade-backend-3o2e.onrender.com/api/yahoo?ticker=${yahooTicker}`;
+  const myProxyUrl = `${API_BASE}/api/yahoo?ticker=${yahooTicker}`;
   const response = await fetch(myProxyUrl);
   if (!response.ok) throw new Error("네트워크 응답이 좋지 않습니다.");
   const data = await response.json();
@@ -692,7 +702,7 @@ const TICKER_SECTOR_HINT = t => {
     ["유통·소비·식품",  ["028260","004170","139480","023530","069960","007070","097950","001040","008770"]],
     ["통신·미디어·운송",["017670","030200","003490","011200","033780","032640","036460","015760","000120"]],
   ];
-  const code = t.ticker.split(".")[0];
+  const code = t.ticker;
   for (const [sector, codes] of g) {
     if (codes.includes(code)) return sector;
   }
@@ -818,8 +828,8 @@ function TickerListModal({ tickers, title, accentColor, C, onClose, onAdd, onDel
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(165px, 1fr))", gap: 7 }}>
                 {list.map(t => {
-                  const code   = t.ticker.split(".")[0];
-                  const market = t.ticker.endsWith(".KQ") ? "KOSDAQ" : "KOSPI";
+                  const code   = t.ticker;
+                  const market = t.market_type || "KOSPI";
                   const isConfirm = confirmDel === t.ticker;
                   return (
                     <div key={t.ticker} style={{ background: isConfirm ? `${C.red}12` : C.panelAlt, border: `1px solid ${isConfirm ? C.red : C.border}`, borderRadius: 6, padding: "10px 12px", position: "relative", transition: "all 0.15s" }}>
@@ -1242,12 +1252,12 @@ function RankRow({ s, idx, valueKey, C }) {
 
 // Mock fallback (API 실패 시)
 const MOCK_YW_PICKS = [
-  { ticker: "005930.KS", name: "삼성전자", price: 74800, changeRate: 1.63, rsi: 42, closes: [], env: { ma: 77200, upper: 81060, lower: 73340, proximity: 20, distPct: 1.98, label: "하한 접근", kPct: 5, period: 20 } },
-  { ticker: "000660.KS", name: "SK하이닉스", price: 189500, changeRate: -1.30, rsi: 34, closes: [], env: { ma: 198000, upper: 207900, lower: 188100, proximity: 8, distPct: 0.74, label: "하한 근접", kPct: 5, period: 20 } },
-  { ticker: "006400.KS", name: "삼성SDI", price: 283000, changeRate: -2.73, rsi: 31, closes: [], env: { ma: 298000, upper: 312900, lower: 283100, proximity: 1, distPct: -0.04, label: "하한 이탈", kPct: 5, period: 20 } },
-  { ticker: "051910.KS", name: "LG화학", price: 312500, changeRate: 1.79, rsi: 48, closes: [], env: { ma: 318000, upper: 333900, lower: 302100, proximity: 31, distPct: 3.44, label: "하한 접근", kPct: 5, period: 20 } },
-  { ticker: "066570.KS", name: "LG전자", price: 98200, changeRate: -0.61, rsi: 38, closes: [], env: { ma: 103000, upper: 108150, lower: 97850, proximity: 12, distPct: 0.36, label: "하한 근접", kPct: 5, period: 20 } },
-  { ticker: "011170.KS", name: "롯데케미칼", price: 91400, changeRate: -1.82, rsi: 29, closes: [], env: { ma: 97000, upper: 101850, lower: 92150, proximity: 4, distPct: -0.81, label: "하한 이탈", kPct: 5, period: 20 } },
+  { ticker: "005930", market_type: "KOSPI", name: "삼성전자", price: 74800, changeRate: 1.63, rsi: 42, closes: [], env: { ma: 77200, upper: 81060, lower: 73340, proximity: 20, distPct: 1.98, label: "하한 접근", kPct: 5, period: 20 } },
+  { ticker: "000660", market_type: "KOSPI", name: "SK하이닉스", price: 189500, changeRate: -1.30, rsi: 34, closes: [], env: { ma: 198000, upper: 207900, lower: 188100, proximity: 8, distPct: 0.74, label: "하한 근접", kPct: 5, period: 20 } },
+  { ticker: "006400", market_type: "KOSPI", name: "삼성SDI", price: 283000, changeRate: -2.73, rsi: 31, closes: [], env: { ma: 298000, upper: 312900, lower: 283100, proximity: 1, distPct: -0.04, label: "하한 이탈", kPct: 5, period: 20 } },
+  { ticker: "051910", market_type: "KOSPI", name: "LG화학", price: 312500, changeRate: 1.79, rsi: 48, closes: [], env: { ma: 318000, upper: 333900, lower: 302100, proximity: 31, distPct: 3.44, label: "하한 접근", kPct: 5, period: 20 } },
+  { ticker: "066570", market_type: "KOSPI", name: "LG전자", price: 98200, changeRate: -0.61, rsi: 38, closes: [], env: { ma: 103000, upper: 108150, lower: 97850, proximity: 12, distPct: 0.36, label: "하한 근접", kPct: 5, period: 20 } },
+  { ticker: "011170", market_type: "KOSPI", name: "롯데케미칼", price: 91400, changeRate: -1.82, rsi: 29, closes: [], env: { ma: 97000, upper: 101850, lower: 92150, proximity: 4, distPct: -0.81, label: "하한 이탈", kPct: 5, period: 20 } },
 ];
 
 // 엔벨로프 하한 근접 점수 (proximity 낮을수록 고점수)
@@ -1756,26 +1766,26 @@ const SECTOR_COLORS = {
 
 // 스캔 대상 종목 (코드 + 이름)
 const THEME_TICKERS = [
-  { ticker: "005930.KS", code: "005930", name: "삼성전자" },
-  { ticker: "000660.KS", code: "000660", name: "SK하이닉스" },
-  { ticker: "042700.KS", code: "042700", name: "한미반도체" },
-  { ticker: "086520.KS", code: "086520", name: "에코프로" },
-  { ticker: "373220.KS", code: "373220", name: "LG에너지솔루션" },
-  { ticker: "006400.KS", code: "006400", name: "삼성SDI" },
-  { ticker: "247540.KS", code: "247540", name: "에코프로비엠" },
-  { ticker: "207940.KS", code: "207940", name: "삼성바이오로직스" },
-  { ticker: "068270.KS", code: "068270", name: "셀트리온" },
-  { ticker: "005380.KS", code: "005380", name: "현대차" },
-  { ticker: "012330.KS", code: "012330", name: "현대모비스" },
-  { ticker: "000270.KS", code: "000270", name: "기아" },
-  { ticker: "105560.KS", code: "105560", name: "KB금융" },
-  { ticker: "055550.KS", code: "055550", name: "신한지주" },
-  { ticker: "035420.KS", code: "035420", name: "NAVER" },
-  { ticker: "035720.KS", code: "035720", name: "카카오" },
-  { ticker: "051910.KS", code: "051910", name: "LG화학" },
-  { ticker: "010950.KS", code: "010950", name: "S-Oil" },
-  { ticker: "015760.KS", code: "015760", name: "한국전력" },
-  { ticker: "032830.KS", code: "032830", name: "삼성생명" },
+  { ticker: "005930", market_type: "KOSPI", name: "삼성전자" },
+  { ticker: "000660", market_type: "KOSPI", name: "SK하이닉스" },
+  { ticker: "042700", market_type: "KOSPI", name: "한미반도체" },
+  { ticker: "086520", market_type: "KOSPI", name: "에코프로" },
+  { ticker: "373220", market_type: "KOSPI", name: "LG에너지솔루션" },
+  { ticker: "006400", market_type: "KOSPI", name: "삼성SDI" },
+  { ticker: "247540", market_type: "KOSPI", name: "에코프로비엠" },
+  { ticker: "207940", market_type: "KOSPI", name: "삼성바이오로직스" },
+  { ticker: "068270", market_type: "KOSPI", name: "셀트리온" },
+  { ticker: "005380", market_type: "KOSPI", name: "현대차" },
+  { ticker: "012330", market_type: "KOSPI", name: "현대모비스" },
+  { ticker: "000270", market_type: "KOSPI", name: "기아" },
+  { ticker: "105560", market_type: "KOSPI", name: "KB금융" },
+  { ticker: "055550", market_type: "KOSPI", name: "신한지주" },
+  { ticker: "035420", market_type: "KOSPI", name: "NAVER" },
+  { ticker: "035720", market_type: "KOSPI", name: "카카오" },
+  { ticker: "051910", market_type: "KOSPI", name: "LG화학" },
+  { ticker: "010950", market_type: "KOSPI", name: "S-Oil" },
+  { ticker: "015760", market_type: "KOSPI", name: "한국전력" },
+  { ticker: "032830", market_type: "KOSPI", name: "삼성생명" },
 ];
 
 const THEME_RENDER_URL = API_BASE;
@@ -1808,7 +1818,7 @@ async function fetchTopVolumeList(exclCode = "0000000000") {
 }
 
 async function fetchThemeQuote(t) {
-  const res  = await fetch(`${THEME_RENDER_URL}/api/yahoo?ticker=${t.ticker}`);
+  const res  = await fetch(`${THEME_RENDER_URL}/api/yahoo?ticker=${toYahooTicker(t.ticker, t.market_type)}`);
   if (!res.ok) throw new Error("fetch fail");
   const data = await res.json();
   const chart = data.chart.result[0];
@@ -2615,10 +2625,21 @@ const MENU_META = [
 function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, setYwTickers, themeTickers, setThemeTickers }) {
   const [activeMenu, setActiveMenu] = useState("closing");
   const [search,     setSearch]     = useState("");
-  const [addInput,   setAddInput]   = useState({ ticker: "", name: "" });
   const [editIdx,    setEditIdx]    = useState(null);
   const [editVal,    setEditVal]    = useState({ ticker: "", name: "" });
   const [confirmDel, setConfirmDel] = useState(null);
+
+  // ── 종목 추가 검색 자동완성 state
+  const [addQuery,      setAddQuery]      = useState("");       // 검색 입력값
+  const [suggestions,   setSuggestions]   = useState([]);       // API 결과 목록
+  const [searching,     setSearching]     = useState(false);    // 로딩 중
+  const [selected,      setSelected]      = useState(null);     // 선택된 종목 { ticker_cd, ticker_nmas }
+  const [searchErr,     setSearchErr]     = useState("");
+  const searchTimer  = useRef(null);
+  const searchBoxRef = useRef(null);
+
+  const [sortKey, setSortKey] = useState(null);   // null | "ticker" | "name" | "market_type"
+  const [sortDir, setSortDir] = useState(1);       // 1=오름 | -1=내림
 
   const listMap = { closing: watchTickers, yw: ywTickers, theme: themeTickers };
   const setMap  = { closing: setWatchTickers, yw: setYwTickers, theme: setThemeTickers };
@@ -2626,28 +2647,85 @@ function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, s
   const setList = setMap[activeMenu];
   const meta    = MENU_META.find(m => m.id === activeMenu);
 
-  const filtered = list.filter(t =>
-    t.ticker.toLowerCase().includes(search.toLowerCase()) ||
-    (t.name || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleSort = key => {
+    if (sortKey === key) {
+      if (sortDir === 1)  { setSortDir(-1); }
+      else                { setSortKey(null); setSortDir(1); }  // 3번째 클릭 → 초기화
+    } else {
+      setSortKey(key); setSortDir(1);
+    }
+  };
+
+  const sortIcon = key => {
+    if (sortKey !== key) return <span style={{ opacity: 0.3, fontSize: "0.8em" }}>⇅</span>;
+    return <span style={{ fontSize: "0.8em", color: "inherit" }}>{sortDir === 1 ? "▲" : "▼"}</span>;
+  };
+
+  const filtered = (() => {
+    let arr = list.filter(t =>
+      t.ticker.toLowerCase().includes(search.toLowerCase()) ||
+      (t.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (t.market_type || "").toLowerCase().includes(search.toLowerCase())
+    );
+    if (sortKey) {
+      arr = [...arr].sort((a, b) => {
+        const va = (a[sortKey] || "").toLowerCase();
+        const vb = (b[sortKey] || "").toLowerCase();
+        return va < vb ? -sortDir : va > vb ? sortDir : 0;
+      });
+    }
+    return arr;
+  })();
+
+  // 검색어 입력 → 300ms 디바운스 후 API 호출
+  const handleAddQueryChange = val => {
+    setAddQuery(val);
+    setSelected(null);
+    setSearchErr("");
+    clearTimeout(searchTimer.current);
+    if (!val.trim()) { setSuggestions([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/supabase/searchTicker?keyword=${encodeURIComponent(val.trim())}`);
+        const data = await res.json();
+        if (data.success) setSuggestions(data.results || []);
+        else setSearchErr(data.message || "검색 실패");
+      } catch { setSearchErr("서버 연결 오류"); }
+      finally { setSearching(false); }
+    }, 300);
+  };
+
+  const selectSuggestion = item => {
+    setSelected(item);
+    setAddQuery(item.ticker_nmas);
+    setSuggestions([]);
+  };
 
   const addTicker = () => {
-    const ticker = addInput.ticker.trim().toUpperCase();
-    if (!ticker || list.find(t => t.ticker === ticker)) return;
-    setList(prev => [...prev, { ticker, name: addInput.name.trim() || ticker }]);
-    setAddInput({ ticker: "", name: "" });
+    if (!selected) return;
+    const ticker      = selected.ticker_cd.trim().toUpperCase();
+    const name        = selected.ticker_nmas.trim();
+    const market_type = selected.market_type || "KOSPI";
+    if (list.find(t => t.ticker === ticker)) {
+      setSearchErr("이미 등록된 종목입니다");
+      return;
+    }
+    setList(prev => [...prev, { ticker, name, market_type }]);
+    setAddQuery(""); setSelected(null); setSuggestions([]); setSearchErr("");
   };
+
   const deleteTicker = ticker => { setList(prev => prev.filter(t => t.ticker !== ticker)); setConfirmDel(null); };
   const saveEdit = idx => {
     const ticker = editVal.ticker.trim().toUpperCase();
     if (!ticker) return;
-    setList(prev => prev.map((t, i) => i === idx ? { ...t, ticker, name: editVal.name.trim() || ticker } : t));
+    setList(prev => prev.map((t, i) => i === idx ? { ...t, ticker, name: editVal.name.trim() || ticker, market_type: editVal.market_type || "KOSPI" } : t));
     setEditIdx(null);
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* 메뉴 탭 + 요약 카드 */}
+      {/* 메뉴 탭 */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {MENU_META.map(m => {
           const cnt = listMap[m.id]?.length ?? 0;
@@ -2668,7 +2746,8 @@ function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, s
       </div>
 
       {/* 종목 리스트 패널 */}
-      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+
         {/* 패널 헤더 */}
         <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, background: C.panelAlt, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2686,12 +2765,31 @@ function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, s
             {search && <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: "1em", padding: 0 }}>✕</button>}
           </div>
         </div>
+
         {/* 컬럼 헤더 */}
-        <div style={{ display: "grid", gridTemplateColumns: "50px 1fr 1fr 90px", padding: "7px 16px", background: `${C.panelAlt}80`, borderBottom: `1px solid ${C.border}` }}>
-          {["#", "종목코드", "종목명", ""].map(h => (
-            <span key={h} style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>{h}</span>
-          ))}
-        </div>
+        {(() => {
+          const COL_STYLE = { fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, cursor: "pointer", userSelect: "none",
+            display: "flex", alignItems: "center", gap: 4 };
+          const hdrs = [
+            { key: null,          label: "#",      sortable: false },
+            { key: "market_type", label: "구분",     sortable: true },
+            { key: "ticker",      label: "종목코드", sortable: true },
+            { key: "name",        label: "종목명",   sortable: true },
+            { key: null,          label: "",         sortable: false },
+          ];
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: "44px 90px 1fr 1.6fr 90px", padding: "7px 16px", background: `${C.panelAlt}80`, borderBottom: `1px solid ${C.border}` }}>
+              {hdrs.map((h, i) => (
+                <div key={i} onClick={h.sortable ? () => handleSort(h.key) : undefined}
+                  style={{ ...COL_STYLE, color: sortKey === h.key ? C.accent : C.muted, cursor: h.sortable ? "pointer" : "default" }}>
+                  {h.label}
+                  {h.sortable && sortIcon(h.key)}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* 종목 행 */}
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
           {filtered.length === 0 && (
@@ -2703,14 +2801,37 @@ function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, s
             const realIdx = list.indexOf(t);
             const isEditing = editIdx === realIdx;
             return (
-              <div key={t.ticker} style={{ display: "grid", gridTemplateColumns: "50px 1fr 1fr 90px", padding: "9px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: isEditing ? `${C.accent}06` : i % 2 === 0 ? "transparent" : `${C.panelAlt}40`, transition: "background 0.15s" }}>
-                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{realIdx + 1}</span>
+              <div key={t.ticker} style={{ display: "grid", gridTemplateColumns: "44px 90px 1fr 1.6fr 90px", padding: "9px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: isEditing ? `${C.accent}06` : i % 2 === 0 ? "transparent" : `${C.panelAlt}40`, transition: "background 0.15s" }}>
+                {/* # */}
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{i + 1}</span>
+                {/* 구분 (market_type) */}
+                {isEditing
+                  ? <select value={editVal.market_type || "KOSPI"} onChange={e => setEditVal(v => ({ ...v, market_type: e.target.value }))}
+                      style={{ padding: "4px 6px", borderRadius: 4, border: `1px solid ${C.accent}`, background: C.panelAlt, color: C.text, fontSize: "0.846em", outline: "none" }}>
+                      <option value="KOSPI">KOSPI</option>
+                      <option value="KOSDAQ">KOSDAQ</option>
+                    </select>
+                  : (() => {
+                      const isKosdaq = t.market_type === "KOSDAQ";
+                      return (
+                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "2px 6px", borderRadius: 4,
+                          width: "fit-content",
+                          background: isKosdaq ? `${C.yellow}15` : `${C.accent}12`,
+                          color: isKosdaq ? C.yellow : C.accent,
+                          border: `1px solid ${isKosdaq ? C.yellow : C.accent}40` }}>
+                          {t.market_type || "KOSPI"}
+                        </span>
+                      );
+                    })()}
+                {/* 종목코드 */}
                 {isEditing
                   ? <input value={editVal.ticker} onChange={e => setEditVal(v => ({ ...v, ticker: e.target.value.toUpperCase() }))} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.923em", outline: "none", width: "90%" }} />
                   : <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.accent }}>{t.ticker}</span>}
+                {/* 종목명 */}
                 {isEditing
                   ? <input value={editVal.name} onChange={e => setEditVal(v => ({ ...v, name: e.target.value }))} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.accent}`, background: C.panelAlt, color: C.text, fontSize: "0.923em", outline: "none", width: "90%" }} />
                   : <span style={{ fontSize: "0.923em", color: C.text }}>{t.name}</span>}
+                {/* 액션 */}
                 <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
                   {isEditing ? (
                     <>
@@ -2724,7 +2845,7 @@ function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, s
                     </>
                   ) : (
                     <>
-                      <button onClick={() => { setEditIdx(realIdx); setEditVal({ ticker: t.ticker, name: t.name || "" }); }} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>수정</button>
+                      <button onClick={() => { setEditIdx(realIdx); setEditVal({ ticker: t.ticker, name: t.name || "", market_type: t.market_type || "KOSPI" }); }} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.border}`, background: "transparent", color: C.muted }}>수정</button>
                       <button onClick={() => setConfirmDel(t.ticker)} style={{ padding: "3px 9px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red }}>삭제</button>
                     </>
                   )}
@@ -2733,27 +2854,115 @@ function TickerSettingsPanel({ C, S, watchTickers, setWatchTickers, ywTickers, s
             );
           })}
         </div>
-        {/* 추가 행 */}
-        <div style={{ padding: "10px 16px", borderTop: `1px solid ${C.border}`, background: `${C.panelAlt}60`, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-          <input value={addInput.ticker} onChange={e => setAddInput(v => ({ ...v, ticker: e.target.value.toUpperCase() }))} onKeyDown={e => e.key === "Enter" && addTicker()} placeholder="종목코드" maxLength={12}
-            style={{ padding: "6px 10px", borderRadius: 4, border: `1px solid ${addInput.ticker ? C.accent : C.border}`, background: C.panelAlt, color: C.text, fontFamily: FONTS.mono, fontSize: "0.923em", outline: "none", width: 110, transition: "border 0.15s" }} />
-          <input value={addInput.name} onChange={e => setAddInput(v => ({ ...v, name: e.target.value }))} onKeyDown={e => e.key === "Enter" && addTicker()} placeholder="종목명 (선택)"
-            style={{ padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.panelAlt, color: C.text, fontSize: "0.923em", outline: "none", flex: 1, minWidth: 120 }} />
-          <button onClick={addTicker} disabled={!addInput.ticker}
-            style={{ padding: "6px 16px", borderRadius: 4, fontSize: "0.846em", fontWeight: 700, cursor: addInput.ticker ? "pointer" : "not-allowed", border: `1px solid ${addInput.ticker ? C.accent : C.border}`, background: addInput.ticker ? `${C.accent}20` : "transparent", color: addInput.ticker ? C.accent : C.muted }}>
-            + 추가
-          </button>
-          {list.length > 0 && (
-            <button onClick={() => { if (window.confirm(`${meta?.label} 종목 전체(${list.length}개)를 삭제하시겠습니까?`)) setList([]); }}
-              style={{ padding: "6px 12px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red, marginLeft: "auto" }}>
-              전체 삭제
+
+        {/* ── 종목 추가 — 검색 자동완성 ── */}
+        <div style={{ padding: "12px 16px", borderTop: `1px solid ${C.border}`, background: `${C.panelAlt}60` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+
+            {/* 검색 입력 + 드롭다운 */}
+            <div ref={searchBoxRef} style={{ position: "relative", flex: 1, minWidth: 200 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 4,
+                border: `1px solid ${selected ? C.green : addQuery ? C.accent : C.border}`,
+                background: C.panelAlt, transition: "border 0.15s" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={searching ? C.accent : C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  value={addQuery}
+                  onChange={e => handleAddQueryChange(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addTicker(); if (e.key === "Escape") { setSuggestions([]); setAddQuery(""); setSelected(null); } }}
+                  placeholder="종목명 또는 코드로 검색..."
+                  style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.text, fontSize: "0.923em", fontFamily: selected ? FONTS.mono : "inherit" }}
+                />
+                {selected && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", padding: "1px 7px", borderRadius: 4, background: `${C.green}18`, color: C.green, border: `1px solid ${C.green}40`, whiteSpace: "nowrap" }}>
+                    {selected.ticker_cd}
+                  </span>
+                )}
+                {searching && (
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.accent, whiteSpace: "nowrap" }}>검색 중…</span>
+                )}
+                {addQuery && (
+                  <button onClick={() => { setAddQuery(""); setSelected(null); setSuggestions([]); setSearchErr(""); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, padding: 0, fontSize: "1em", flexShrink: 0 }}>✕</button>
+                )}
+              </div>
+
+              {/* 자동완성 드롭다운 — position fixed로 overflow 제약 탈출 */}
+              {(suggestions.length > 0 || (!searching && addQuery && !selected && !searchErr)) && (() => {
+                const rect = searchBoxRef.current?.getBoundingClientRect();
+                const dropStyle = {
+                  position: "fixed",
+                  top: rect ? rect.bottom + 4 : 0,
+                  left: rect ? rect.left : 0,
+                  width: rect ? rect.width : 300,
+                  zIndex: 9999,
+                  background: C.panel,
+                  border: `1px solid ${C.accent}50`,
+                  borderRadius: 6,
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                  overflow: "hidden",
+                };
+                return (
+                  <div style={dropStyle}>
+                    {suggestions.length > 0 ? suggestions.map((item, i) => {
+                      const alreadyAdded = !!list.find(t => t.ticker === item.ticker_cd.toUpperCase());
+                      return (
+                        <div key={item.ticker_cd}
+                          onClick={() => !alreadyAdded && selectSuggestion(item)}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 14px",
+                            background: i % 2 === 0 ? "transparent" : `${C.panelAlt}60`,
+                            cursor: alreadyAdded ? "default" : "pointer", opacity: alreadyAdded ? 0.45 : 1,
+                            borderBottom: i < suggestions.length - 1 ? `1px solid ${C.border}20` : "none",
+                            transition: "background 0.1s" }}
+                          onMouseEnter={e => { if (!alreadyAdded) e.currentTarget.style.background = `${C.accent}10`; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? "transparent" : `${C.panelAlt}60`; }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent, minWidth: 70 }}>{item.ticker_cd}</span>
+                            <span style={{ fontSize: "0.923em", color: C.text }}>{item.ticker_nmas}</span>
+                          </div>
+                          {alreadyAdded
+                            ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.green, background: `${C.green}15`, border: `1px solid ${C.green}30`, borderRadius: 4, padding: "1px 7px" }}>등록됨</span>
+                            : <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>선택 →</span>}
+                        </div>
+                      );
+                    }) : (
+                      <div style={{ padding: "12px 14px", fontSize: "0.846em", color: C.muted, textAlign: "center" }}>검색 결과 없음</div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* 추가 버튼 */}
+            <button onClick={addTicker} disabled={!selected}
+              style={{ padding: "7px 18px", borderRadius: 4, fontSize: "0.846em", fontWeight: 700, whiteSpace: "nowrap",
+                cursor: selected ? "pointer" : "not-allowed",
+                border: `1px solid ${selected ? C.green : C.border}`,
+                background: selected ? `${C.green}20` : "transparent",
+                color: selected ? C.green : C.muted, transition: "all 0.15s" }}>
+              + 추가
             </button>
+
+            {/* 전체 삭제 */}
+            {list.length > 0 && (
+              <button onClick={() => { if (window.confirm(`${meta?.label} 종목 전체(${list.length}개)를 삭제하시겠습니까?`)) setList([]); }}
+                style={{ padding: "7px 12px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red, whiteSpace: "nowrap" }}>
+                전체 삭제
+              </button>
+            )}
+          </div>
+
+          {/* 에러 메시지 */}
+          {searchErr && (
+            <div style={{ marginTop: 6, fontSize: "0.769em", color: C.red, fontFamily: FONTS.mono }}>⚠ {searchErr}</div>
           )}
         </div>
       </div>
+
       {/* 안내 */}
       <div style={{ padding: "9px 14px", borderRadius: 6, background: `${C.accent}08`, border: `1px solid ${C.accent}18`, fontSize: "0.846em", color: C.muted, lineHeight: 1.8 }}>
         💡 <strong style={{ color: C.accent }}>{meta?.label}</strong> — {meta?.desc}. 변경사항은 해당 탭의 다음 새로고침 시 즉시 반영됩니다.
@@ -3470,7 +3679,7 @@ export default function StockDashboard() {
     let anyOk = false;
     for (const t of watchTickers) {
       try {
-        const d = await fetchYahooQuote(t.ticker);
+        const d = await fetchYahooQuote(t.ticker, t.market_type);
         anyOk = true;
         setClosingStocks(prev => [...prev, { ...d, ...t, apiError: false }]);
       } catch (err) {
@@ -3558,7 +3767,7 @@ export default function StockDashboard() {
     let anyOk = false;
     for (const t of ywTickers) {
       try {
-        const d = await fetchYahooQuote(t.ticker);
+        const d = await fetchYahooQuote(t.ticker, t.market_type);
         anyOk = true;
         setYwStocks(prev => [...prev, { ...d, ...t, apiError: false }]);
       } catch (err) {
