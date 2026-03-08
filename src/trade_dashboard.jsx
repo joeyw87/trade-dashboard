@@ -7,6 +7,18 @@ const APP_VERSION  = "1.6.1";
 const APP_DATE     = "2026-03-08";
 
 // ════════════════════════════════════════════════════════
+//  백엔드 URL 설정
+//  - 로컬(localhost)   → localhost:3001
+//  - 그 외(배포 환경)  → Render 클라우드
+// ════════════════════════════════════════════════════════
+const IS_LOCAL = typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+const API_BASE = IS_LOCAL
+  ? "http://localhost:3001"                     // 로컬 백엔드
+  : "https://trade-backend-3o2e.onrender.com"; // Render 클라우드
+
+// ════════════════════════════════════════════════════════
 //  1. 테마 & 색상
 // ════════════════════════════════════════════════════════
 
@@ -360,7 +372,8 @@ async function fetchYahooQuote(ticker) {
   //로컬 백엔드 사용
   //const myProxyUrl = `http://localhost:3001/api/yahoo?ticker=${ticker}`;
   //무료 클라우드 render 사용
-  const myProxyUrl = `https://trade-backend-3o2e.onrender.com/api/yahoo?ticker=${ticker}`;
+  //const myProxyUrl = `https://trade-backend-3o2e.onrender.com/api/yahoo?ticker=${ticker}`;
+  const myProxyUrl = `${API_BASE}/api/yahoo?ticker=${ticker}`;
   const response = await fetch(myProxyUrl);
   if (!response.ok) throw new Error("네트워크 응답이 좋지 않습니다.");
   const data = await response.json();
@@ -1765,12 +1778,12 @@ const THEME_TICKERS = [
   { ticker: "032830.KS", code: "032830", name: "삼성생명" },
 ];
 
-const THEME_RENDER_URL = "https://trade-backend-3o2e.onrender.com";
+const THEME_RENDER_URL = API_BASE;
 
 
 // 거래대금 상위 종목 리스트 가져오기 (백엔드 프록시)
 async function fetchTopVolumeList(exclCode = "0000000000") {
-  const res = await fetch(`http://localhost:3001/api/kis/top-volume?exclCode=${encodeURIComponent(exclCode)}`);
+  const res = await fetch(`${API_BASE}/api/kis/top-volume?exclCode=${encodeURIComponent(exclCode)}`);
   if (!res.ok) throw new Error("top-volume API 실패: " + res.status);
   const data = await res.json();
   if (!data.success || !Array.isArray(data.topStocks)) throw new Error("응답 형식 오류");
@@ -2813,8 +2826,6 @@ function AdminSettingsTab({ C, S, watchTickers, setWatchTickers, ywTickers, setY
   );
 }
 
-const KIS_BASE = "http://localhost:3001";
-
 const KIS_STRATEGIES = [
   { id: "envelope", name: "엔벨로프 하한", desc: "MA 하한선 근접 시 매수·이탈 시 매도", icon: "📉" },
   { id: "rsi",      name: "RSI 역추세",    desc: "과매도 진입 / 과매수 청산",           icon: "📊" },
@@ -2868,7 +2879,7 @@ function AutoTradeTab({ C, S, autoEnabled, setAutoEnabled, selectedStrategy, set
     setKisStatus("connecting");
     setKisErrMsg("");
     try {
-      const res = await fetch(`${KIS_BASE}/api/kis/balance`);
+      const res = await fetch(`${API_BASE}/api/kis/balance`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setKisBalance(data);
@@ -2884,7 +2895,7 @@ function AutoTradeTab({ C, S, autoEnabled, setAutoEnabled, selectedStrategy, set
     if (!orderTicker) return;
     const body = { ticker: orderTicker, side: orderSide, qty: orderQty, price: orderType === "market" ? 0 : orderPrice, orderType };
     try {
-      const res = await fetch(`${KIS_BASE}/api/kis/order`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const res = await fetch(`${API_BASE}/api/kis/order`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       const msg = data.success ? `${orderSide === "buy" ? "매수" : "매도"} 주문 접수: ${orderTicker} ${orderQty}주 @ ${orderType === "market" ? "시장가" : orderPrice?.toLocaleString()}` : `주문 실패: ${data.message}`;
       setLogs(prev => [{ time: fmtTime(new Date()), type: data.success ? orderSide : "error", msg }, ...prev]);
@@ -3370,7 +3381,7 @@ export default function StockDashboard() {
   const resetFont = () => setFontSize(15);
 
   // ── Render Cold Start 감지 ────────────────────────────
-  const RENDER_URL     = "https://trade-backend-3o2e.onrender.com";
+  const RENDER_URL     = API_BASE;  // 환경에 따라 자동 분기 (최상단 API_BASE 참조)
   const COLD_START_MS  = 3000; // 3초 이상 응답 없으면 안내
   const [coldStartVisible,  setColdStartVisible]  = useState(false);
   const [coldStartDone,     setColdStartDone]     = useState(false);
