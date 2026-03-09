@@ -4548,7 +4548,7 @@ export default function StockDashboard() {
             </div>
             <div style={{ fontSize: "0.923em", color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>
               서버가 <span style={{ color: C.yellow, fontWeight: 600 }}>Sleep 모드</span>에서 깨어나고 있습니다.<br />
-              Cold Start 시간이 필요하니 잠시만 기다려 주세요.
+              Start 시간이 필요하니 잠시만 기다려 주세요.
             </div>
             {/* 스피너 + 경과 시간 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 20 }}>
