@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.7.2";
+const APP_VERSION  = "1.7.3";
 const APP_DATE     = "2026-03-09";
 
 // ════════════════════════════════════════════════════════
@@ -2703,9 +2703,10 @@ function KisClosingBetTab({ C }) {
             <div style={{ ...S.panel, textAlign: "center", padding: 48, color: C.muted }}>조건에 맞는 후보 종목이 없습니다.</div>
           ) : (
             <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
-              <div className="mobile-scroll-x">
+              <div className="mobile-scroll-x" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              <div style={{ minWidth: 832 }}>
               {/* 테이블 헤더 */}
-              <div style={{ minWidth: 720, display: "grid", gridTemplateColumns: "40px 68px 1.4fr 0.5fr 92px 84px 92px 100px 128px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: "grid", gridTemplateColumns: "40px 68px 140px 80px 88px 80px 88px 96px 120px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
                 {[
                   { key: null,                   label: "#",         right: false },
                   { key: "marketType",           label: "구분",      right: false },
@@ -2726,7 +2727,7 @@ function KisClosingBetTab({ C }) {
                 ))}
               </div>
               {/* 행 */}
-              <div style={{ maxHeight: 520, overflowY: "auto" }}>
+              <div>
                 {sortedCandidates.map((c, i) => {
                   const pos       = Number(c.positionRatioPercent);
                   const posColor  = pos >= 95 ? C.green : pos >= 85 ? C.yellow : C.muted;
@@ -2735,7 +2736,7 @@ function KisClosingBetTab({ C }) {
                   const volInc    = Number(c.volumeIncreaseRate);
                   const volColor  = volInc >= 100 ? C.green : volInc >= 30 ? C.yellow : C.muted;
                   return (
-                    <div key={c.ticker + i} style={{ minWidth: 720, display: "grid", gridTemplateColumns: "40px 68px 1.4fr 0.5fr 92px 84px 92px 100px 128px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
+                    <div key={c.ticker + i} style={{ display: "grid", gridTemplateColumns: "40px 68px 140px 80px 88px 80px 88px 96px 120px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
                       {/* # */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{i + 1}</span>
                       {/* 구분 */}
@@ -2768,6 +2769,7 @@ function KisClosingBetTab({ C }) {
                   );
                 })}
               </div>
+              </div>{/* minWidth wrapper 끝 */}
               </div>{/* mobile-scroll-x 끝 */}
             </div>
           )}
