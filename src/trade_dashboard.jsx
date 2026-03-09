@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.7.3";
+const APP_VERSION  = "1.7.4";
 const APP_DATE     = "2026-03-09";
 
 // ════════════════════════════════════════════════════════
@@ -2704,17 +2704,19 @@ function KisClosingBetTab({ C }) {
           ) : (
             <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
               <div className="mobile-scroll-x" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-              <div style={{ minWidth: 832 }}>
+              <div style={{ minWidth: 992 }}>
               {/* 테이블 헤더 */}
-              <div style={{ display: "grid", gridTemplateColumns: "40px 68px 140px 80px 88px 80px 88px 96px 120px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: "grid", gridTemplateColumns: "40px 68px 140px 80px 72px 88px 80px 88px 88px 96px 120px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
                 {[
                   { key: null,                   label: "#",         right: false },
                   { key: "marketType",           label: "구분",      right: false },
                   { key: null,                   label: "종목명",    right: false },
                   { key: "ticker",               label: "종목코드",  right: false },
+                  { key: "dataFg",               label: "추출유형",  right: false },
                   { key: "price",                label: "현재가",    right: true  },
                   { key: "changeRate",           label: "등락률",    right: true  },
                   { key: "tradeValue",           label: "거래대금",  right: true  },
+                  { key: "totalPrice",           label: "시가총액",  right: true  },
                   { key: "volumeIncreaseRate",   label: "거래량증가율", right: true },
                   { key: "positionRatioPercent", label: "캔들위치",  right: true  },
                 ].map((h, i) => (
@@ -2736,7 +2738,7 @@ function KisClosingBetTab({ C }) {
                   const volInc    = Number(c.volumeIncreaseRate);
                   const volColor  = volInc >= 100 ? C.green : volInc >= 30 ? C.yellow : C.muted;
                   return (
-                    <div key={c.ticker + i} style={{ display: "grid", gridTemplateColumns: "40px 68px 140px 80px 88px 80px 88px 96px 120px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
+                    <div key={c.ticker + i} style={{ minWidth: 992, display: "grid", gridTemplateColumns: "40px 68px 140px 80px 72px 88px 80px 88px 88px 96px 120px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
                       {/* # */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{i + 1}</span>
                       {/* 구분 */}
@@ -2748,12 +2750,19 @@ function KisClosingBetTab({ C }) {
                       <span style={{ fontSize: "0.923em", color: C.text, fontWeight: 600 }}>{c.name}</span>
                       {/* 종목코드 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{c.ticker}</span>
+                      {/* 추출유형 */}
+                      <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "2px 5px", borderRadius: 4, width: "fit-content",
+                        background: `${C.green}15`, color: C.green, border: `1px solid ${C.green}30` }}>
+                        {c.dataFg ?? "-"}
+                      </span>
                       {/* 현재가 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, textAlign: "right" }}>{fmt(c.price)}</span>
                       {/* 등락률 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", textAlign: "right" }}>{fmtRate(c.changeRate)}</span>
                       {/* 거래대금 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted, textAlign: "right" }}>{fmtValue(c.tradeValue)}</span>
+                      {/* 시가총액 */}
+                      <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted, textAlign: "right" }}>{c.totalPriceFormatted ?? "-"}</span>
                       {/* 거래량증가율 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: volColor, textAlign: "right", fontWeight: volInc >= 30 ? 700 : 400 }}>
                         {volInc >= 0 ? "+" : ""}{volInc.toFixed(1)}%
