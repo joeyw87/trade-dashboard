@@ -3,8 +3,9 @@ import { useState, useEffect, useRef, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.7.1";
-const APP_DATE     = "2026-03-09";
+const APP_VERSION  = "1.5.8";
+const APP_DATE     = "2026-03-08";
+const APP_NOTES    = "백엔드 URL 환경 자동 분기";
 
 // ════════════════════════════════════════════════════════
 //  백엔드 URL 설정
@@ -2703,8 +2704,9 @@ function KisClosingBetTab({ C }) {
             <div style={{ ...S.panel, textAlign: "center", padding: 48, color: C.muted }}>조건에 맞는 후보 종목이 없습니다.</div>
           ) : (
             <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+              <div className="mobile-scroll-x">
               {/* 테이블 헤더 */}
-              <div style={{ display: "grid", gridTemplateColumns: "40px 68px 1.4fr 0.5fr 92px 84px 92px 100px 128px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ minWidth: 720, display: "grid", gridTemplateColumns: "40px 68px 1.4fr 0.5fr 92px 84px 92px 100px 128px", padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
                 {[
                   { key: null,                   label: "#",         right: false },
                   { key: "marketType",           label: "구분",      right: false },
@@ -2734,7 +2736,7 @@ function KisClosingBetTab({ C }) {
                   const volInc    = Number(c.volumeIncreaseRate);
                   const volColor  = volInc >= 100 ? C.green : volInc >= 30 ? C.yellow : C.muted;
                   return (
-                    <div key={c.ticker + i} style={{ display: "grid", gridTemplateColumns: "40px 68px 1.4fr 0.5fr 92px 84px 92px 100px 128px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
+                    <div key={c.ticker + i} style={{ minWidth: 720, display: "grid", gridTemplateColumns: "40px 68px 1.4fr 0.5fr 92px 84px 92px 100px 128px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
                       {/* # */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{i + 1}</span>
                       {/* 구분 */}
@@ -2767,6 +2769,7 @@ function KisClosingBetTab({ C }) {
                   );
                 })}
               </div>
+              </div>{/* mobile-scroll-x 끝 */}
             </div>
           )}
 
