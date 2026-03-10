@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.7.4";
-const APP_DATE     = "2026-03-09";
+const APP_VERSION  = "1.8.1";
+const APP_DATE     = "2026-03-10";
 
 // ════════════════════════════════════════════════════════
 //  백엔드 URL 설정
@@ -2496,23 +2496,30 @@ function ScanListModal({ list, title, C, onClose }) {
         </div>
 
         {/* 컬럼 헤더 */}
-        <div style={{ display: "grid", gridTemplateColumns: COL, padding: "6px 18px", background: `${C.panelAlt}80`, borderBottom: `1px solid ${C.border}` }}>
-          {[
-            { label: "#",      key: null },
-            { label: "구분",   key: null },
-            { label: "종목코드", key: null },
-            { label: "종목명",  key: null },
-            { label: "거래대금", key: "tradeValue" },
-          ].map((h, i) => (
-            <div key={i} onClick={h.key ? () => handleSort(h.key) : undefined}
-              style={{ fontFamily: FONTS.mono, fontSize: "0.692em", display: "flex", alignItems: "center", gap: 3,
-                color: sortKey === h.key ? C.accent : C.muted,
-                cursor: h.key ? "pointer" : "default", userSelect: "none",
-                justifyContent: i === 4 ? "flex-end" : "flex-start" }}>
-              {h.label}{h.key && sortIcon(h.key)}
+        {(() => {
+          const isUS = list.length > 0 && list[0].marketType === "US";
+          const tradeHeader = isUS ? "거래량" : "거래대금";
+          const tradeKey    = isUS ? "volume" : "tradeValue";
+          return (
+            <div style={{ display: "grid", gridTemplateColumns: COL, padding: "6px 18px", background: `${C.panelAlt}80`, borderBottom: `1px solid ${C.border}` }}>
+              {[
+                { label: "#",          key: null },
+                { label: "구분",       key: null },
+                { label: "종목코드",   key: null },
+                { label: "종목명",     key: null },
+                { label: tradeHeader,  key: tradeKey },
+              ].map((h, i) => (
+                <div key={i} onClick={h.key ? () => handleSort(h.key) : undefined}
+                  style={{ fontFamily: FONTS.mono, fontSize: "0.692em", display: "flex", alignItems: "center", gap: 3,
+                    color: sortKey === h.key ? C.accent : C.muted,
+                    cursor: h.key ? "pointer" : "default", userSelect: "none",
+                    justifyContent: i === 4 ? "flex-end" : "flex-start" }}>
+                  {h.label}{h.key && sortIcon(h.key)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         {/* 리스트 */}
         <div style={{ overflowY: "auto", flex: 1 }}>
@@ -2536,9 +2543,11 @@ function ScanListModal({ list, title, C, onClose }) {
                 <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{t.ticker}</span>
                 {/* 종목명 */}
                 <span style={{ fontSize: "0.923em", color: C.text }}>{t.name}</span>
-                {/* 거래대금 */}
+                {/* 거래대금 / 미국:거래량 */}
                 <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, textAlign: "right" }}>
-                  {t.tradeValue != null ? fmtValue(t.tradeValue) : "-"}
+                  {t.marketType === "US"
+                    ? (t.volume != null ? fmtValue(t.volume) + "주" : "-")
+                    : (t.tradeValue != null ? fmtValue(t.tradeValue) : "-")}
                 </span>
               </div>
             );
@@ -2562,7 +2571,7 @@ function KisClosingBetTab({ C }) {
   const [marketType,  setMarketType]  = useState("KOSPI");
   const [exclCode,    setExclCode]    = useState("111111111");
   const [loading,     setLoading]     = useState(false);
-  const [result,      setResult]      = useState(null);   // { totalScanned, count, candidates }
+  const [result,      setResult]      = useState(null);
   const [error,       setError]       = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
   const [sortKey,     setSortKey]     = useState("positionRatioPercent");
@@ -2570,15 +2579,19 @@ function KisClosingBetTab({ C }) {
   const [scanModalOpen, setScanModalOpen] = useState(false);
 
   const MARKET_OPTS = [
-    { value: "ALL",    label: "전체" },
+    { value: "ALL",    label: "전체(국내)" },
     { value: "KOSPI",  label: "KOSPI" },
     { value: "KOSDAQ", label: "KOSDAQ" },
+    { value: "US",     label: "미국주식" },
   ];
 
   const fetchBet = async () => {
     setLoading(true); setError(""); setResult(null);
     try {
-      const res  = await fetch(`${API_BASE}/api/kis/closing-bet?marketType=${marketType}&exclCode=${encodeURIComponent(exclCode)}`);
+      const url = marketType === "US"
+        ? `${API_BASE}/api/yahoo2/us-closing-bet`
+        : `${API_BASE}/api/kis/closing-bet?marketType=${marketType}&exclCode=${encodeURIComponent(exclCode)}`;
+      const res  = await fetch(url);
       const data = await res.json();
       if (!data.success) throw new Error(data.message || "조회 실패");
       setResult(data);
@@ -2731,12 +2744,17 @@ function KisClosingBetTab({ C }) {
               {/* 행 */}
               <div>
                 {sortedCandidates.map((c, i) => {
-                  const pos       = Number(c.positionRatioPercent);
-                  const posColor  = pos >= 95 ? C.green : pos >= 85 ? C.yellow : C.muted;
-                  const isKosdaq  = c.marketType === "KOSDAQ";
-                  const mktColor  = isKosdaq ? C.yellow : C.accent;
-                  const volInc    = Number(c.volumeIncreaseRate);
-                  const volColor  = volInc >= 100 ? C.green : volInc >= 30 ? C.yellow : C.muted;
+                  const pos      = Number(c.positionRatioPercent);
+                  const posColor = pos >= 95 ? C.green : pos >= 85 ? C.yellow : C.muted;
+                  const isUS     = c.marketType === "US";
+                  const isKosdaq = c.marketType === "KOSDAQ";
+                  const mktColor = isUS ? "#60a5fa" : isKosdaq ? C.yellow : C.accent;
+                  const volInc   = Number(c.volumeIncreaseRate);
+                  const volColor = volInc >= 100 ? C.green : volInc >= 30 ? C.yellow : C.muted;
+                  // 미국주식: volume 표시, 국내: tradeValue 표시
+                  const tradeDisplay = isUS
+                    ? (c.volume != null ? fmtValue(c.volume) + " 주" : "-")
+                    : fmtValue(c.tradeValue);
                   return (
                     <div key={c.ticker + i} style={{ minWidth: 992, display: "grid", gridTemplateColumns: "40px 68px 140px 80px 72px 88px 80px 88px 88px 96px 120px", padding: "10px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
                       {/* # */}
@@ -2756,16 +2774,18 @@ function KisClosingBetTab({ C }) {
                         {c.dataFg ?? "-"}
                       </span>
                       {/* 현재가 */}
-                      <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, textAlign: "right" }}>{fmt(c.price)}</span>
+                      <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, textAlign: "right" }}>
+                        {isUS ? `$${Number(c.price).toFixed(2)}` : fmt(c.price)}
+                      </span>
                       {/* 등락률 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", textAlign: "right" }}>{fmtRate(c.changeRate)}</span>
-                      {/* 거래대금 */}
-                      <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted, textAlign: "right" }}>{fmtValue(c.tradeValue)}</span>
+                      {/* 거래대금 / 미국:거래량 */}
+                      <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted, textAlign: "right" }}>{tradeDisplay}</span>
                       {/* 시가총액 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted, textAlign: "right" }}>{c.totalPriceFormatted ?? "-"}</span>
-                      {/* 거래량증가율 */}
+                      {/* 거래량증가율 — 미국주식은 해당 없음 */}
                       <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: volColor, textAlign: "right", fontWeight: volInc >= 30 ? 700 : 400 }}>
-                        {volInc >= 0 ? "+" : ""}{volInc.toFixed(1)}%
+                        {isUS ? "-" : `${volInc >= 0 ? "+" : ""}${volInc.toFixed(1)}%`}
                       </span>
                       {/* 캔들위치 */}
                       <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
