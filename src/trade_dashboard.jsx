@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.8.1";
+const APP_VERSION  = "1.9.1";
 const APP_DATE     = "2026-03-10";
 
 // ════════════════════════════════════════════════════════
@@ -1404,13 +1404,20 @@ function EnvelopeSettings({ period, kPct, setPeriod, setKPct, C, noBorder }) {
   );
 }
 
-function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onReload, ywPickTickers, onAddYwTicker, onDeleteYwTicker }) {
+function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onReload, fetched, ywPickTickers, onAddYwTicker, onDeleteYwTicker }) {
   const S = makeS(C);
+  const [mainTab, setMainTab] = useState("legacy");  // "legacy" | "kis"
   const [envPeriod, setEnvPeriod] = useState(20);
   const [envKPct, setEnvKPct] = useState(4);
   const [filterLabel, setFilterLabel] = useState("전체");
   const [filterPanelOpen, setFilterPanelOpen] = useState(true);
   const [tickerModalOpen, setTickerModalOpen] = useState(false);
+
+  // ── KisEnvelopeTab state 끌어올리기 (탭 전환 시 결과 유지) ──
+  const [kisEnvResult,      setKisEnvResult]      = useState(null);
+  const [kisEnvLoading,     setKisEnvLoading]     = useState(false);
+  const [kisEnvError,       setKisEnvError]       = useState("");
+  const [kisEnvLastUpdated, setKisEnvLastUpdated] = useState(null);
 
   // ── 거래량·거래대금 필터 ──────────────────────────────
   const [volPeriod, setVolPeriod] = useState(5);
@@ -1467,6 +1474,35 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="slide-in">
+
+      {/* ── 최상위 탭 전환 ── */}
+      <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${C.border}` }}>
+        {[
+          { id: "legacy", label: "⭐ 영욱문" },
+          { id: "kis",    label: "📡 엔벨(KIS)" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setMainTab(t.id)}
+            style={{ padding: "8px 18px", borderRadius: "6px 6px 0 0", fontSize: "0.923em", cursor: "pointer", fontFamily: FONTS.mono,
+              border: `1px solid ${mainTab === t.id ? C.yellow : C.border}`,
+              borderBottom: mainTab === t.id ? `1px solid ${C.bg}` : `1px solid ${C.border}`,
+              background: mainTab === t.id ? `${C.yellow}12` : C.panelAlt,
+              color: mainTab === t.id ? C.yellow : C.muted,
+              fontWeight: mainTab === t.id ? 700 : 400, marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 엔벨(KIS) 탭 ── */}
+      {mainTab === "kis" && <KisEnvelopeTab C={C}
+        result={kisEnvResult}       setResult={setKisEnvResult}
+        loading={kisEnvLoading}     setLoading={setKisEnvLoading}
+        error={kisEnvError}         setError={setKisEnvError}
+        lastUpdated={kisEnvLastUpdated} setLastUpdated={setKisEnvLastUpdated}
+      />}
+
+      {/* ── 기존 영욱문 탭 ── */}
+      {mainTab === "legacy" && <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
       {/* 헤더 배너 */}
       <div style={{ background: `linear-gradient(135deg, ${C.panel}, ${C.panelAlt})`, border: `1px solid ${C.border}`, borderRadius: 8, padding: "16px 20px" }}>
@@ -1732,13 +1768,286 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
         <span style={{ color: C.yellow }}>⚠</span>
         <span>엔벨로프 MA{envPeriod} ±{envKPct}% 기준 하한 근접 종목 자동 선별입니다. 하한 지지는 추세 하락 시 무의미할 수 있으므로 RSI·거래량을 병행 확인하세요. 투자 판단은 본인 책임입니다.</span>
       </div>
+      </div>}{/* legacy 탭 끝 */}
     </div>
   );
 }
 
 // ════════════════════════════════════════════════════════
-//  12. 주도/테마 탭
+//  11-B. KIS 엔벨로프 탭
 // ════════════════════════════════════════════════════════
+function KisEnvelopeTab({ C }) {
+  const S = makeS(C);
+  const [loading,     setLoading]     = useState(false);
+  const [result,      setResult]      = useState(null);
+  const [error,       setError]       = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [sortKey,     setSortKey]     = useState("gapFromLowerBand");
+  const [sortDir,     setSortDir]     = useState(1);
+  const [filterOpen,  setFilterOpen]  = useState(true);
+
+  // 거래대금 필터 (억 단위)
+  const [minTv,   setMinTv]   = useState(0);
+  // 시가총액 필터 (조 단위)
+  const [minMcap, setMinMcap] = useState(0);
+
+  const fetchEnv = async () => {
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const res  = await fetch(`${API_BASE}/api/kis/envelope`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "조회 실패");
+      setResult(data);
+      setLastUpdated(new Date());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSort = key => {
+    if (sortKey === key) {
+      if (sortDir === -1) setSortDir(1);
+      else { setSortKey(null); setSortDir(-1); }
+    } else { setSortKey(key); setSortDir(-1); }
+  };
+  const sortIcon = key => {
+    if (sortKey !== key) return <span style={{ fontSize: "0.8em", opacity: 0.3 }}>⇅</span>;
+    return <span style={{ fontSize: "0.8em" }}>{sortDir === -1 ? "▼" : "▲"}</span>;
+  };
+
+  const filtered = result ? result.candidates.filter(c => {
+    if (minTv   > 0 && (c.tradeValue ?? 0) < minTv   * 1e8) return false;
+    if (minMcap > 0 && (c.totalPrice ?? 0) < minMcap * 1e12) return false;
+    return true;
+  }) : [];
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortKey) return 0;
+    const va = sortKey === "_score" ? calcScore(a).total : Number(a[sortKey]) || 0;
+    const vb = sortKey === "_score" ? calcScore(b).total : Number(b[sortKey]) || 0;
+    return (vb - va) * sortDir * -1;
+  });
+
+  const fmtRate = v => {
+    const n = Number(v);
+    return <span style={{ color: n >= 0 ? C.green : C.red, fontWeight: 600 }}>{n >= 0 ? "+" : ""}{n.toFixed(2)}%</span>;
+  };
+
+  const TV_OPTS   = [0, 50, 100, 300, 500, 1000];
+  const MCAP_OPTS = [0, 1, 3, 5, 10, 30];
+
+  // ── 종합 매수신호 점수 계산 (0~100) ──────────────────
+  const calcScore = c => {
+    // 1. 하한근접도 (40점) — gap이 0에 가까울수록 만점, -5% 이하면 0점
+    const gap      = Number(c.gapFromLowerBand);
+    const gapScore = gap <= 0 ? 40 : gap >= 5 ? 0 : Math.round((1 - gap / 5) * 40);
+
+    // 2. 거래량급증 (30점) — volumeIncreaseRate 0~200% 구간
+    const volInc      = Number(c.volumeIncreaseRate ?? 0);
+    const volScore    = volInc <= 0 ? 0 : Math.min(30, Math.round((volInc / 200) * 30));
+
+    // 3. 가격위치 (20점) — price가 lowerBand에 가까울수록 만점
+    const lower    = Number(c.lowerBand ?? 0);
+    const ma20v    = Number(c.ma20 ?? 0);
+    const price    = Number(c.price ?? 0);
+    const range    = ma20v - lower;
+    const posRatio = range > 0 ? (price - lower) / range : 1;
+    const posScore = Math.round(Math.max(0, (1 - posRatio)) * 20);
+
+    // 4. 거래 회전율 (10점) — nday_vol_tnrt 0~1% 구간
+    const tnrt      = Number(c.nday_vol_tnrt ?? 0);
+    const tnrtScore = Math.min(10, Math.round(tnrt * 10));
+
+    const total = gapScore + volScore + posScore + tnrtScore;
+    const grade = total >= 90 ? "S" : total >= 75 ? "A" : total >= 60 ? "B" : "C";
+    const color = total >= 90 ? "#f87171" : total >= 75 ? "#facc15" : total >= 60 ? "#4ade80" : "#6b7280";
+    return { total, grade, color, gapScore, volScore, posScore, tnrtScore };
+  };
+
+  if (!loading && !result && !error) return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 20 }}>
+      <div style={{ fontSize: "3em" }}>📡</div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.yellow }}>엔벨(KIS)</div>
+      <div style={{ fontSize: "1em", color: C.muted, textAlign: "center", lineHeight: 1.7 }}>
+        KIS API 기반 엔벨로프 추천 종목을 조회합니다.
+      </div>
+      <button onClick={fetchEnv} style={{ padding: "10px 36px", borderRadius: 6, fontSize: "1em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>
+        📡 조회 시작
+      </button>
+    </div>
+  );
+
+  const COL   = "40px 68px 1fr 72px 116px 104px 104px 88px";
+  const MIN_W = 800;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* 컨트롤 바 */}
+      <div style={{ ...S.panel, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {result && (<>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>스캔 <b style={{ color: C.accent }}>{result.totalScanned}</b>종목</span>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>후보 <b style={{ color: C.yellow }}>{result.count}</b>종목</span>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.green }}>표시 <b>{sorted.length}</b>종목</span>
+          </>)}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
+          {loading
+            ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>조회 중… (약 10~30초 소요)</span>
+            : <button onClick={fetchEnv} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>🔄 새로고침</button>}
+        </div>
+      </div>
+
+      {/* 필터 패널 */}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+        <div onClick={() => setFilterOpen(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: C.panelAlt, cursor: "pointer", userSelect: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>조건 필터</span>
+            {(minTv > 0 || minMcap > 0) && <div style={{ display: "flex", gap: 4 }}>
+              {minTv   > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.accent}20`, color: C.accent, border: `1px solid ${C.accent}40` }}>거래대금 {minTv >= 1000 ? `${minTv/100}천억` : `${minTv}억`}+</span>}
+              {minMcap > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.yellow}20`, color: C.yellow, border: `1px solid ${C.yellow}40` }}>시가총액 {minMcap}조+</span>}
+            </div>}
+          </div>
+          <span style={{ transform: filterOpen ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s", color: C.muted, fontSize: "0.769em" }}>▲</span>
+        </div>
+        <div style={{ overflow: "hidden", maxHeight: filterOpen ? 300 : 0, transition: "max-height 0.4s ease" }}>
+          <div style={{ padding: "14px 16px", display: "flex", flexWrap: "wrap", gap: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 거래대금</span>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {TV_OPTS.map(v => <button key={v} onClick={() => setMinTv(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minTv === v ? C.accent : C.border}`, background: minTv === v ? `${C.accent}18` : "transparent", color: minTv === v ? C.accent : C.muted, fontWeight: minTv === v ? 700 : 400 }}>{v === 0 ? "전체" : v >= 1000 ? `${v/100}천억` : `${v}억`}</button>)}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 시가총액</span>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {MCAP_OPTS.map(v => <button key={v} onClick={() => setMinMcap(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minMcap === v ? C.yellow : C.border}`, background: minMcap === v ? `${C.yellow}18` : "transparent", color: minMcap === v ? C.yellow : C.muted, fontWeight: minMcap === v ? 700 : 400 }}>{v === 0 ? "전체" : `${v}조`}</button>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 에러 */}
+      {error && <div style={{ ...S.panel, background: `${C.red}10`, border: `1px solid ${C.red}40`, fontSize: "0.923em", color: C.red }}>⚠ {error}</div>}
+
+      {/* 로딩 */}
+      {loading && (
+        <div style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 48 }}>
+          <div className="spin" style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${C.border}`, borderTopColor: C.yellow }} />
+          <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.muted }}>KIS API로 종목 분석 중… 잠시 기다려주세요</div>
+        </div>
+      )}
+
+      {/* 테이블 */}
+      {result && !loading && (
+        sorted.length === 0
+          ? <div style={{ ...S.panel, textAlign: "center", padding: 48, color: C.muted }}>조건에 맞는 종목이 없습니다.</div>
+          : <div style={{ ...S.panel, padding: 0, overflow: "hidden" }}>
+              <div className="mobile-scroll-x">
+                {/* 헤더 */}
+                <div style={{ minWidth: MIN_W, display: "grid", gridTemplateColumns: COL, padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
+                  {[
+                    { key: null,               label: "#",                   right: false },
+                    { key: "marketType",       label: "구분",                right: false },
+                    { key: "gapFromLowerBand", label: "종목  ·  하한거리",    right: false },
+                    { key: "ticker",           label: "코드",                right: false },
+                    { key: "price",            label: "현재가  ·  MA위치",    right: true  },
+                    { key: "tradeValue",       label: "거래대금  ·  거래량↑", right: true  },
+                    { key: "totalPrice",       label: "시가총액  ·  회전율",  right: true  },
+                    { key: "_score",           label: "신호점수",             right: true  },
+                  ].map((h, i) => (
+                    <div key={i} onClick={h.key ? () => handleSort(h.key) : undefined}
+                      style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: sortKey === h.key ? C.yellow : C.muted,
+                        cursor: h.key ? "pointer" : "default", userSelect: "none",
+                        display: "flex", alignItems: "center", gap: 3,
+                        justifyContent: h.right ? "flex-end" : "flex-start" }}>
+                      {h.label}{h.key && sortIcon(h.key)}
+                    </div>
+                  ))}
+                </div>
+                {/* 행 */}
+                <div>
+                  {sorted.map((c, i) => {
+                    const isKosdaq = c.marketType === "KOSDAQ";
+                    const mktColor = isKosdaq ? C.yellow : C.accent;
+                    const gap      = Number(c.gapFromLowerBand);
+                    const gapColor = gap < 0 ? C.red : gap < 1 ? "#f97316" : gap < 3 ? C.yellow : C.green;
+                    const volInc   = Number(c.volumeIncreaseRate);
+                    const volColor = volInc >= 100 ? C.green : volInc >= 30 ? C.yellow : C.muted;
+                    const sc       = calcScore(c);
+                    const lower    = Number(c.lowerBand);
+                    const ma20v    = Number(c.ma20);
+                    const priceN   = Number(c.price);
+                    const barPct   = ma20v > lower ? Math.max(0, Math.min(100, ((priceN - lower) / (ma20v - lower)) * 100)) : 50;
+                    const barColor = barPct <= 30 ? C.red : barPct <= 60 ? C.yellow : C.green;
+                    return (
+                      <div key={c.ticker + i} style={{ minWidth: MIN_W, display: "grid", gridTemplateColumns: COL, padding: "12px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
+                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{i + 1}</span>
+                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "2px 6px", borderRadius: 4, width: "fit-content", background: `${mktColor}15`, color: mktColor, border: `1px solid ${mktColor}40` }}>{c.marketType || "?"}</span>
+                        {/* 핵심: 종목명 + 하한거리 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 700, color: C.text, fontSize: "0.923em" }}>{c.name}</span>
+                            {c.dataFg && <span style={{ fontFamily: FONTS.mono, fontSize: "0.615em", padding: "1px 5px", borderRadius: 3, background: `${C.green}15`, color: C.green, border: `1px solid ${C.green}30` }}>{c.dataFg}</span>}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 700, color: gapColor }}>{gap >= 0 ? "+" : ""}{gap.toFixed(2)}%</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>하한 {fmt(lower)}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>MA20 {fmt(ma20v)}</span>
+                          </div>
+                        </div>
+                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{c.ticker}</span>
+                        {/* 현재가 + 위치 바 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, fontWeight: 600 }}>{fmt(priceN)}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em" }}>{fmtRate(c.changeRate)}</span>
+                          </div>
+                          <div style={{ width: "100%" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: FONTS.mono, fontSize: "0.538em", color: C.muted, marginBottom: 2 }}>
+                              <span>하한</span><span>MA20</span>
+                            </div>
+                            <div style={{ position: "relative", height: 4, borderRadius: 2, background: `linear-gradient(to right, ${C.red}40, ${C.yellow}40, ${C.green}40)` }}>
+                              <div style={{ position: "absolute", left: `${barPct}%`, transform: "translateX(-50%)", top: -3, width: 10, height: 10, borderRadius: "50%", background: barColor, border: `2px solid ${C.panel}`, boxShadow: `0 0 4px ${barColor}` }} />
+                            </div>
+                          </div>
+                        </div>
+                        {/* 거래대금 + 거래량증가율 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
+                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{fmtValue(c.tradeValue)}</span>
+                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: volColor, fontWeight: volInc >= 30 ? 700 : 400 }}>거래량 {volInc >= 0 ? "+" : ""}{volInc.toFixed(0)}%</span>
+                        </div>
+                        {/* 시가총액 + 회전율 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
+                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{c.totalPriceFormatted ?? "-"}</span>
+                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>회전 {Number(c.nday_vol_tnrt ?? 0).toFixed(2)}%</span>
+                        </div>
+                        {/* 신호점수 */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: `${sc.color}20`, color: sc.color, border: `1px solid ${sc.color}50` }}>{sc.grade}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "1em", fontWeight: 700, color: sc.color }}>{sc.total}</span>
+                          </div>
+                          <div style={{ width: 64, height: 3, borderRadius: 2, background: `${C.border}60`, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${sc.total}%`, background: sc.color, borderRadius: 2, transition: "width 0.4s" }} />
+                          </div>
+                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.538em", color: C.muted, letterSpacing: 0.5 }}>하한{sc.gapScore} 거량{sc.volScore} 위치{sc.posScore} 회전{sc.tnrtScore}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+      )}
+    </div>
+  );
+}
 
 // 섹터 분류 매핑 (ticker → 섹터)
 const SECTOR_MAP = {
@@ -4103,7 +4412,7 @@ export default function StockDashboard() {
   const [ywLoadedCount, setYwLoadedCount] = useState(0);
   const [ywError,       setYwError]       = useState(null);
   const [ywLastUpdated, setYwLastUpdated] = useState(null);
-  const [ywFetched,     setYwFetched]     = useState(false); // 최초 1회 플래그
+  const [ywFetched,     setYwFetched]     = useState(false); // 최초 1회 플래그 — 탭 진입 시 자동 조회 없음, 새로고침 버튼으로만 조회
 
   // ── 주도/테마 데이터 ──────────────────────────────────
   const [themeStocks,      setThemeStocks]      = useState([]);
@@ -4297,7 +4606,6 @@ export default function StockDashboard() {
                     setTab(t.id);
                     if (t.id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
                     if (t.id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
-                    if (t.id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
                     if (t.id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
                   }}
                   style={{ background: "none", border: "none", borderBottom: tab === t.id ? `2px solid ${tabAccent(t.id)}` : "2px solid transparent", borderTop: "2px solid transparent", cursor: "pointer", fontFamily: FONTS.header, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", padding: "0 10px", height: "100%", color: tab === t.id ? tabAccent(t.id) : t.adminOnly ? C.accent : C.headerMuted, opacity: t.adminOnly ? 0.85 : 1, whiteSpace: "nowrap" }}
@@ -4356,7 +4664,6 @@ export default function StockDashboard() {
                     setMobileMenuOpen(false);
                     if (t.id === "menu_dashboard" && !marketFetched && !marketLoading) loadMarketData();
                     if (t.id === "menu_closing"   && !closingFetched && !closingLoading) loadClosingData();
-                    if (t.id === "menu_yw-pick"   && !ywFetched && !ywLoading) loadYwData();
                     if (t.id === "menu_theme"     && !themeFetched && !themeLoading) loadThemeData();
                   }}
                   style={{ display: "flex", alignItems: "center", width: "100%", padding: "13px 20px", background: tab === t.id ? `${tabAccent(t.id)}12` : "transparent", border: "none", borderLeft: tab === t.id ? `3px solid ${tabAccent(t.id)}` : "3px solid transparent", cursor: "pointer", fontFamily: FONTS.header, fontSize: 13, letterSpacing: 1, color: tab === t.id ? tabAccent(t.id) : C.headerMuted, textAlign: "left" }}
