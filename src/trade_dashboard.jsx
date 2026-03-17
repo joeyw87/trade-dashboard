@@ -3,8 +3,8 @@ import { useState, useEffect, useRef, Fragment } from "react";
 // ════════════════════════════════════════════════════════
 //  버전 정보 — 여기서 관리
 // ════════════════════════════════════════════════════════
-const APP_VERSION  = "1.9.1";
-const APP_DATE     = "2026-03-10";
+const APP_VERSION  = "1.10.1";
+const APP_DATE     = "2026-03-18";
 
 // ════════════════════════════════════════════════════════
 //  백엔드 URL 설정
@@ -1799,6 +1799,9 @@ function KisEnvelopeTab({ C }) {
   const error       = market === "KR" ? krError       : usError;
   const lastUpdated = market === "KR" ? krLastUpdated : usLastUpdated;
 
+  // 거래대금 필터 (억 단위, 국내) / 거래량 필터 (만주 단위, 미국)
+  const [minTv,   setMinTv]   = useState(0);
+  const [minVol,  setMinVol]  = useState(0);
   // 시가총액 필터 (억 단위, 국내 전용)
   const [minMcap, setMinMcap] = useState(0);
 
@@ -1837,7 +1840,9 @@ function KisEnvelopeTab({ C }) {
   };
 
   const filtered = result ? result.candidates.filter(c => {
+    if (market === "KR" && minTv   > 0 && (c.tradeValue ?? 0) < minTv  * 1e8) return false;
     if (market === "KR" && minMcap > 0 && (c.totalPrice ?? 0) < minMcap * 1e8) return false;
+    if (market === "US" && minVol  > 0 && (c.volume    ?? 0) < minVol  * 1e4) return false;
     return true;
   }) : [];
 
@@ -1853,6 +1858,10 @@ function KisEnvelopeTab({ C }) {
     return <span style={{ color: n >= 0 ? C.green : C.red, fontWeight: 600 }}>{n >= 0 ? "+" : ""}{n.toFixed(2)}%</span>;
   };
 
+  const TV_OPTS   = [0, 50, 100, 200, 300, 500, 1000, 3000];
+  const tvLabel   = v => v === 0 ? "전체" : v >= 1000 ? `${v / 1000}천억` : `${v}억`;
+  const VOL_OPTS  = [0, 100, 500, 1000, 5000, 10000, 50000];
+  const volLabel  = v => v === 0 ? "전체" : v >= 10000 ? `${v / 10000}억주` : `${v}만주`;
   const MCAP_OPTS = [0, 500, 1000, 2000, 3000, 5000, 10000, 30000, 50000, 100000, 300000];
   const mcapLabel = v => v === 0 ? "전체" : v >= 10000 ? `${v / 10000}조` : `${v}억`;
 
@@ -1927,8 +1936,10 @@ function KisEnvelopeTab({ C }) {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
             <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>조건 필터</span>
-            {market === "KR" && minMcap > 0 && <div style={{ display: "flex", gap: 4 }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.yellow}20`, color: C.yellow, border: `1px solid ${C.yellow}40` }}>시가총액 {mcapLabel(minMcap)}+</span>
+            {(minTv > 0 || minMcap > 0 || minVol > 0) && <div style={{ display: "flex", gap: 4 }}>
+              {market === "KR" && minTv   > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.accent}20`, color: C.accent, border: `1px solid ${C.accent}40` }}>거래대금 {tvLabel(minTv)}+</span>}
+              {market === "KR" && minMcap > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.yellow}20`, color: C.yellow, border: `1px solid ${C.yellow}40` }}>시가총액 {mcapLabel(minMcap)}+</span>}
+              {market === "US" && minVol  > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.accent}20`, color: C.accent, border: `1px solid ${C.accent}40` }}>거래량 {volLabel(minVol)}+</span>}
             </div>}
           </div>
           <span style={{ transform: filterOpen ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s", color: C.muted, fontSize: "0.769em" }}>▲</span>
@@ -1936,14 +1947,27 @@ function KisEnvelopeTab({ C }) {
         <div style={{ overflow: "hidden", maxHeight: filterOpen ? 300 : 0, transition: "max-height 0.4s ease" }}>
           <div style={{ padding: "14px 16px" }}>
             {market === "KR" ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 시가총액</span>
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {MCAP_OPTS.map(v => <button key={v} onClick={() => setMinMcap(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minMcap === v ? C.yellow : C.border}`, background: minMcap === v ? `${C.yellow}18` : "transparent", color: minMcap === v ? C.yellow : C.muted, fontWeight: minMcap === v ? 700 : 400 }}>{mcapLabel(v)}</button>)}
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 거래대금</span>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {TV_OPTS.map(v => <button key={v} onClick={() => setMinTv(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minTv === v ? C.accent : C.border}`, background: minTv === v ? `${C.accent}18` : "transparent", color: minTv === v ? C.accent : C.muted, fontWeight: minTv === v ? 700 : 400 }}>{tvLabel(v)}</button>)}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 시가총액</span>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {MCAP_OPTS.map(v => <button key={v} onClick={() => setMinMcap(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minMcap === v ? C.yellow : C.border}`, background: minMcap === v ? `${C.yellow}18` : "transparent", color: minMcap === v ? C.yellow : C.muted, fontWeight: minMcap === v ? 700 : 400 }}>{mcapLabel(v)}</button>)}
+                  </div>
                 </div>
               </div>
             ) : (
-              <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>미국주식은 추가 필터가 없습니다.</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 거래량</span>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {VOL_OPTS.map(v => <button key={v} onClick={() => setMinVol(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minVol === v ? C.accent : C.border}`, background: minVol === v ? `${C.accent}18` : "transparent", color: minVol === v ? C.accent : C.muted, fontWeight: minVol === v ? 700 : 400 }}>{volLabel(v)}</button>)}
+                </div>
+              </div>
             )}
           </div>
         </div>
