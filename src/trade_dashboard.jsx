@@ -1778,23 +1778,42 @@ function YwPickTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRelo
 // ════════════════════════════════════════════════════════
 function KisEnvelopeTab({ C }) {
   const S = makeS(C);
-  const [loading,     setLoading]     = useState(false);
-  const [result,      setResult]      = useState(null);
-  const [error,       setError]       = useState("");
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [market,      setMarket]      = useState("KR");   // "KR" | "US"
   const [sortKey,     setSortKey]     = useState("gapFromLowerBand");
   const [sortDir,     setSortDir]     = useState(1);
   const [filterOpen,  setFilterOpen]  = useState(true);
 
-  // 거래대금 필터 (억 단위)
-  const [minTv,   setMinTv]   = useState(0);
-  // 시가총액 필터 (조 단위)
+  // KR / US 각각 독립 상태
+  const [krResult,      setKrResult]      = useState(null);
+  const [krLoading,     setKrLoading]     = useState(false);
+  const [krError,       setKrError]       = useState("");
+  const [krLastUpdated, setKrLastUpdated] = useState(null);
+
+  const [usResult,      setUsResult]      = useState(null);
+  const [usLoading,     setUsLoading]     = useState(false);
+  const [usError,       setUsError]       = useState("");
+  const [usLastUpdated, setUsLastUpdated] = useState(null);
+
+  const result      = market === "KR" ? krResult      : usResult;
+  const loading     = market === "KR" ? krLoading     : usLoading;
+  const error       = market === "KR" ? krError       : usError;
+  const lastUpdated = market === "KR" ? krLastUpdated : usLastUpdated;
+
+  // 시가총액 필터 (억 단위, 국내 전용)
   const [minMcap, setMinMcap] = useState(0);
 
-  const fetchEnv = async () => {
-    setLoading(true); setError(""); setResult(null);
+  const fetchEnv = async (mkt) => {
+    const m = mkt ?? market;
+    const setLoading     = m === "KR" ? setKrLoading     : setUsLoading;
+    const setResult      = m === "KR" ? setKrResult      : setUsResult;
+    const setError       = m === "KR" ? setKrError       : setUsError;
+    const setLastUpdated = m === "KR" ? setKrLastUpdated : setUsLastUpdated;
+    setLoading(true); setError("");
     try {
-      const res  = await fetch(`${API_BASE}/api/kis/envelope`);
+      const url = m === "US"
+        ? `${API_BASE}/api/yahoo2/us-envelope`
+        : `${API_BASE}/api/kis/envelope`;
+      const res  = await fetch(url);
       const data = await res.json();
       if (!data.success) throw new Error(data.message || "조회 실패");
       setResult(data);
@@ -1818,8 +1837,7 @@ function KisEnvelopeTab({ C }) {
   };
 
   const filtered = result ? result.candidates.filter(c => {
-    if (minTv   > 0 && (c.tradeValue ?? 0) < minTv   * 1e8) return false;
-    if (minMcap > 0 && (c.totalPrice ?? 0) < minMcap * 1e12) return false;
+    if (market === "KR" && minMcap > 0 && (c.totalPrice ?? 0) < minMcap * 1e8) return false;
     return true;
   }) : [];
 
@@ -1835,8 +1853,8 @@ function KisEnvelopeTab({ C }) {
     return <span style={{ color: n >= 0 ? C.green : C.red, fontWeight: 600 }}>{n >= 0 ? "+" : ""}{n.toFixed(2)}%</span>;
   };
 
-  const TV_OPTS   = [0, 50, 100, 300, 500, 1000];
-  const MCAP_OPTS = [0, 1, 3, 5, 10, 30];
+  const MCAP_OPTS = [0, 500, 1000, 2000, 3000, 5000, 10000, 30000, 50000, 100000, 300000];
+  const mcapLabel = v => v === 0 ? "전체" : v >= 10000 ? `${v / 10000}조` : `${v}억`;
 
   // ── 종합 매수신호 점수 계산 (0~100) ──────────────────
   const calcScore = c => {
@@ -1866,19 +1884,6 @@ function KisEnvelopeTab({ C }) {
     return { total, grade, color, gapScore, volScore, posScore, tnrtScore };
   };
 
-  if (!loading && !result && !error) return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 20 }}>
-      <div style={{ fontSize: "3em" }}>📡</div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.yellow }}>엔벨(KIS)</div>
-      <div style={{ fontSize: "1em", color: C.muted, textAlign: "center", lineHeight: 1.7 }}>
-        KIS API 기반 엔벨로프 추천 종목을 조회합니다.
-      </div>
-      <button onClick={fetchEnv} style={{ padding: "10px 36px", borderRadius: 6, fontSize: "1em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>
-        📡 조회 시작
-      </button>
-    </div>
-  );
-
   const COL   = "40px 68px 1fr 72px 116px 104px 104px 88px";
   const MIN_W = 800;
 
@@ -1886,7 +1891,19 @@ function KisEnvelopeTab({ C }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* 컨트롤 바 */}
       <div style={{ ...S.panel, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {/* 시장 토글 */}
+          <div style={{ display: "flex", gap: 3, background: C.panelAlt, border: `1px solid ${C.border}`, borderRadius: 6, padding: 3 }}>
+            {[{ id: "KR", label: "🇰🇷 국내" }, { id: "US", label: "🇺🇸 미국" }].map(m => (
+              <button key={m.id} onClick={() => setMarket(m.id)}
+                style={{ padding: "4px 14px", borderRadius: 4, fontSize: "0.846em", fontWeight: 600, cursor: "pointer", fontFamily: FONTS.mono,
+                  border: `1px solid ${market === m.id ? C.yellow : "transparent"}`,
+                  background: market === m.id ? `${C.yellow}18` : "transparent",
+                  color: market === m.id ? C.yellow : C.muted }}>
+                {m.label}
+              </button>
+            ))}
+          </div>
           {result && (<>
             <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>스캔 <b style={{ color: C.accent }}>{result.totalScanned}</b>종목</span>
             <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>후보 <b style={{ color: C.yellow }}>{result.count}</b>종목</span>
@@ -1897,7 +1914,10 @@ function KisEnvelopeTab({ C }) {
           {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
           {loading
             ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>조회 중… (약 10~30초 소요)</span>
-            : <button onClick={fetchEnv} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>🔄 새로고침</button>}
+            : result
+              ? <button onClick={() => fetchEnv()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>🔄 새로고침</button>
+              : <button onClick={() => fetchEnv()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 18px", borderRadius: 4, fontSize: "0.923em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>📡 조회 시작</button>
+          }
         </div>
       </div>
 
@@ -1907,27 +1927,24 @@ function KisEnvelopeTab({ C }) {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
             <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted, letterSpacing: 1 }}>조건 필터</span>
-            {(minTv > 0 || minMcap > 0) && <div style={{ display: "flex", gap: 4 }}>
-              {minTv   > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.accent}20`, color: C.accent, border: `1px solid ${C.accent}40` }}>거래대금 {minTv >= 1000 ? `${minTv/100}천억` : `${minTv}억`}+</span>}
-              {minMcap > 0 && <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.yellow}20`, color: C.yellow, border: `1px solid ${C.yellow}40` }}>시가총액 {minMcap}조+</span>}
+            {market === "KR" && minMcap > 0 && <div style={{ display: "flex", gap: 4 }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "1px 6px", borderRadius: 10, background: `${C.yellow}20`, color: C.yellow, border: `1px solid ${C.yellow}40` }}>시가총액 {mcapLabel(minMcap)}+</span>
             </div>}
           </div>
           <span style={{ transform: filterOpen ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.3s", color: C.muted, fontSize: "0.769em" }}>▲</span>
         </div>
         <div style={{ overflow: "hidden", maxHeight: filterOpen ? 300 : 0, transition: "max-height 0.4s ease" }}>
-          <div style={{ padding: "14px 16px", display: "flex", flexWrap: "wrap", gap: 20 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 거래대금</span>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {TV_OPTS.map(v => <button key={v} onClick={() => setMinTv(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minTv === v ? C.accent : C.border}`, background: minTv === v ? `${C.accent}18` : "transparent", color: minTv === v ? C.accent : C.muted, fontWeight: minTv === v ? 700 : 400 }}>{v === 0 ? "전체" : v >= 1000 ? `${v/100}천억` : `${v}억`}</button>)}
+          <div style={{ padding: "14px 16px" }}>
+            {market === "KR" ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 시가총액</span>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {MCAP_OPTS.map(v => <button key={v} onClick={() => setMinMcap(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minMcap === v ? C.yellow : C.border}`, background: minMcap === v ? `${C.yellow}18` : "transparent", color: minMcap === v ? C.yellow : C.muted, fontWeight: minMcap === v ? 700 : 400 }}>{mcapLabel(v)}</button>)}
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted, letterSpacing: 1 }}>최소 시가총액</span>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {MCAP_OPTS.map(v => <button key={v} onClick={() => setMinMcap(v)} style={{ padding: "4px 10px", borderRadius: 4, fontSize: "0.769em", cursor: "pointer", fontFamily: FONTS.mono, border: `1px solid ${minMcap === v ? C.yellow : C.border}`, background: minMcap === v ? `${C.yellow}18` : "transparent", color: minMcap === v ? C.yellow : C.muted, fontWeight: minMcap === v ? 700 : 400 }}>{v === 0 ? "전체" : `${v}조`}</button>)}
-              </div>
-            </div>
+            ) : (
+              <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>미국주식은 추가 필터가 없습니다.</span>
+            )}
           </div>
         </div>
       </div>
@@ -1939,7 +1956,15 @@ function KisEnvelopeTab({ C }) {
       {loading && (
         <div style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 48 }}>
           <div className="spin" style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${C.border}`, borderTopColor: C.yellow }} />
-          <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.muted }}>KIS API로 종목 분석 중… 잠시 기다려주세요</div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.muted }}>{market === "US" ? "Yahoo Finance로 미국 종목 분석 중…" : "KIS API로 국내 종목 분석 중…"} 잠시 기다려주세요</div>
+        </div>
+      )}
+
+      {/* 미조회 안내 */}
+      {!result && !loading && !error && (
+        <div style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 48, color: C.muted }}>
+          <span style={{ fontSize: "2em" }}>{market === "US" ? "🇺🇸" : "🇰🇷"}</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em" }}>{market === "US" ? "미국주식" : "국내주식"} 엔벨로프 데이터를 조회해주세요.</span>
         </div>
       )}
 
@@ -1952,14 +1977,14 @@ function KisEnvelopeTab({ C }) {
                 {/* 헤더 */}
                 <div style={{ minWidth: MIN_W, display: "grid", gridTemplateColumns: COL, padding: "8px 16px", background: C.panelAlt, borderBottom: `1px solid ${C.border}` }}>
                   {[
-                    { key: null,               label: "#",                   right: false },
-                    { key: "marketType",       label: "구분",                right: false },
-                    { key: "gapFromLowerBand", label: "종목  ·  하한거리",    right: false },
-                    { key: "ticker",           label: "코드",                right: false },
-                    { key: "price",            label: "현재가  ·  MA위치",    right: true  },
-                    { key: "tradeValue",       label: "거래대금  ·  거래량↑", right: true  },
-                    { key: "totalPrice",       label: "시가총액  ·  회전율",  right: true  },
-                    { key: "_score",           label: "신호점수",             right: true  },
+                    { key: null,               label: "#",                                          right: false },
+                    { key: "marketType",       label: "구분",                                       right: false },
+                    { key: "gapFromLowerBand", label: "종목  ·  하한거리",                           right: false },
+                    { key: "ticker",           label: "코드",                                       right: false },
+                    { key: "price",            label: "현재가  ·  MA위치",                          right: true  },
+                    { key: "tradeValue",       label: market === "US" ? "거래량  ·  거래량↑" : "거래대금  ·  거래량↑", right: true  },
+                    { key: "totalPrice",       label: market === "US" ? "시가총액  ·  52W범위"  : "시가총액  ·  회전율",  right: true  },
+                    { key: "_score",           label: "신호점수",                                   right: true  },
                   ].map((h, i) => (
                     <div key={i} onClick={h.key ? () => handleSort(h.key) : undefined}
                       style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: sortKey === h.key ? C.yellow : C.muted,
@@ -1973,8 +1998,9 @@ function KisEnvelopeTab({ C }) {
                 {/* 행 */}
                 <div>
                   {sorted.map((c, i) => {
+                    const isUS     = market === "US";
                     const isKosdaq = c.marketType === "KOSDAQ";
-                    const mktColor = isKosdaq ? C.yellow : C.accent;
+                    const mktColor = isUS ? "#60a5fa" : isKosdaq ? C.yellow : C.accent;
                     const gap      = Number(c.gapFromLowerBand);
                     const gapColor = gap < 0 ? C.red : gap < 1 ? "#f97316" : gap < 3 ? C.yellow : C.green;
                     const volInc   = Number(c.volumeIncreaseRate);
@@ -1988,8 +2014,8 @@ function KisEnvelopeTab({ C }) {
                     return (
                       <div key={c.ticker + i} style={{ minWidth: MIN_W, display: "grid", gridTemplateColumns: COL, padding: "12px 16px", borderBottom: `1px solid ${C.border}10`, alignItems: "center", background: i % 2 === 0 ? "transparent" : `${C.panelAlt}40` }}>
                         <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>{i + 1}</span>
-                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "2px 6px", borderRadius: 4, width: "fit-content", background: `${mktColor}15`, color: mktColor, border: `1px solid ${mktColor}40` }}>{c.marketType || "?"}</span>
-                        {/* 핵심: 종목명 + 하한거리 */}
+                        <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", padding: "2px 6px", borderRadius: 4, width: "fit-content", background: `${mktColor}15`, color: mktColor, border: `1px solid ${mktColor}40` }}>{isUS ? "🇺🇸 US" : (c.marketType || "?")}</span>
+                        {/* 종목명 + 하한거리 */}
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ fontWeight: 700, color: C.text, fontSize: "0.923em" }}>{c.name}</span>
@@ -1997,15 +2023,15 @@ function KisEnvelopeTab({ C }) {
                           </div>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
                             <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", fontWeight: 700, color: gapColor }}>{gap >= 0 ? "+" : ""}{gap.toFixed(2)}%</span>
-                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>하한 {fmt(lower)}</span>
-                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>MA20 {fmt(ma20v)}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>하한 {isUS ? lower.toFixed(2) : fmt(lower)}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>MA20 {isUS ? ma20v.toFixed(2) : fmt(ma20v)}</span>
                           </div>
                         </div>
                         <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>{c.ticker}</span>
                         {/* 현재가 + 위치 바 */}
                         <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, fontWeight: 600 }}>{fmt(priceN)}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.text, fontWeight: 600 }}>{isUS ? `$${priceN.toFixed(2)}` : fmt(priceN)}</span>
                             <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em" }}>{fmtRate(c.changeRate)}</span>
                           </div>
                           <div style={{ width: "100%" }}>
@@ -2017,15 +2043,25 @@ function KisEnvelopeTab({ C }) {
                             </div>
                           </div>
                         </div>
-                        {/* 거래대금 + 거래량증가율 */}
+                        {/* 거래대금(국내) / 거래량(미국) + 거래량증가율 */}
                         <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
-                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{fmtValue(c.tradeValue)}</span>
+                          {isUS
+                            ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{c.volume != null ? fmtValue(c.volume) + " 주" : "-"}</span>
+                            : <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{fmtValue(c.tradeValue)}</span>
+                          }
                           <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: volColor, fontWeight: volInc >= 30 ? 700 : 400 }}>거래량 {volInc >= 0 ? "+" : ""}{volInc.toFixed(0)}%</span>
                         </div>
-                        {/* 시가총액 + 회전율 */}
+                        {/* 시가총액(국내) / 52W범위(미국) + 회전율 */}
                         <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
-                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{c.totalPriceFormatted ?? "-"}</span>
-                          <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>회전 {Number(c.nday_vol_tnrt ?? 0).toFixed(2)}%</span>
+                          {isUS ? (<>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.769em", color: C.muted }}>
+                              {c.week52Low != null ? `$${Number(c.week52Low).toFixed(2)}` : "-"} ~ {c.week52High != null ? `$${Number(c.week52High).toFixed(2)}` : "-"}
+                            </span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.615em", color: C.muted }}>52W 범위</span>
+                          </>) : (<>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>{c.totalPriceFormatted ?? "-"}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: "0.692em", color: C.muted }}>회전 {Number(c.nday_vol_tnrt ?? 0).toFixed(2)}%</span>
+                          </>)}
                         </div>
                         {/* 신호점수 */}
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
@@ -2875,14 +2911,10 @@ function ScanListModal({ list, title, C, onClose }) {
 // ════════════════════════════════════════════════════════
 //  13-A. KIS 종가베팅 탭 (closing-bet API)
 // ════════════════════════════════════════════════════════
-function KisClosingBetTab({ C }) {
+function KisClosingBetTab({ C, result, setResult, loading, setLoading, error, setError, lastUpdated, setLastUpdated }) {
   const S = makeS(C);
-  const [marketType,  setMarketType]  = useState("KOSPI");
+  const [marketType,  setMarketType]  = useState("ALL");
   const [exclCode,    setExclCode]    = useState("111111111");
-  const [loading,     setLoading]     = useState(false);
-  const [result,      setResult]      = useState(null);
-  const [error,       setError]       = useState("");
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [sortKey,     setSortKey]     = useState("positionRatioPercent");
   const [sortDir,     setSortDir]     = useState(-1);
   const [scanModalOpen, setScanModalOpen] = useState(false);
@@ -2895,7 +2927,7 @@ function KisClosingBetTab({ C }) {
   ];
 
   const fetchBet = async () => {
-    setLoading(true); setError(""); setResult(null);
+    setLoading(true); setError("");
     try {
       const url = marketType === "US"
         ? `${API_BASE}/api/yahoo2/us-closing-bet`
@@ -2945,28 +2977,6 @@ function KisClosingBetTab({ C }) {
     return <span style={{ color: n >= 0 ? C.green : C.red, fontWeight: 600 }}>{n >= 0 ? "+" : ""}{n.toFixed(2)}%</span>;
   };
 
-  // ── 미조회 초기 화면
-  if (!loading && !result && !error) return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 80, gap: 20 }}>
-      <div style={{ fontSize: "3em" }}>⚡</div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: "1.231em", fontWeight: 700, color: C.yellow }}>KIS 종가베팅</div>
-      <div style={{ fontSize: "0.923em", color: C.muted, textAlign: "center", lineHeight: 1.8 }}>
-        거래대금 상위 종목 중 캔들 위치(고가 부근 80% 이상) 기반으로<br/>종가 매수 후보를 선별합니다.
-      </div>
-      {/* 조회 옵션 */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {MARKET_OPTS.map(o => (
-            <button key={o.value} onClick={() => setMarketType(o.value)} style={btnStyle(marketType === o.value)}>{o.label}</button>
-          ))}
-        </div>
-        <button onClick={fetchBet} style={{ padding: "10px 36px", borderRadius: 6, fontSize: "1em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>
-          ⚡ 조회 시작
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
@@ -2982,9 +2992,10 @@ function KisClosingBetTab({ C }) {
           {lastUpdated && !loading && <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.muted }}>갱신: {fmtTime(lastUpdated)}</span>}
           {loading
             ? <span style={{ fontFamily: FONTS.mono, fontSize: "0.846em", color: C.accent }}>조회 중… (약 10~30초 소요)</span>
-            : <button onClick={fetchBet} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>
-                🔄 새로고침
-              </button>}
+            : result
+              ? <button onClick={fetchBet} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 14px", borderRadius: 4, fontSize: "0.846em", cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}15`, color: C.yellow }}>🔄 새로고침</button>
+              : <button onClick={fetchBet} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 18px", borderRadius: 4, fontSize: "0.923em", fontWeight: 700, cursor: "pointer", border: `1px solid ${C.yellow}`, background: `${C.yellow}18`, color: C.yellow, fontFamily: FONTS.mono }}>⚡ 조회 시작</button>
+          }
         </div>
       </div>
 
@@ -2998,6 +3009,14 @@ function KisClosingBetTab({ C }) {
         <div style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 48 }}>
           <div className="spin" style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${C.border}`, borderTopColor: C.yellow }} />
           <div style={{ fontFamily: FONTS.mono, fontSize: "0.923em", color: C.muted }}>KIS API로 종목 분석 중… 잠시 기다려주세요</div>
+        </div>
+      )}
+
+      {/* 미조회 안내 */}
+      {!result && !loading && !error && (
+        <div style={{ ...S.panel, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 48, color: C.muted }}>
+          <span style={{ fontSize: "2em" }}>⚡</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: "0.923em" }}>거래대금 상위 종목 중 종가 매수 후보를 선별합니다.</span>
         </div>
       )}
 
@@ -3134,6 +3153,12 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
   const [section, setSection] = useState("recommend");
   const [tickerModalOpen, setTickerModalOpen] = useState(false);
 
+  // ── KIS 종가베팅 state 끌어올리기 (탭 전환 시 결과 유지) ──
+  const [kisResult,      setKisResult]      = useState(null);
+  const [kisLoading,     setKisLoading]     = useState(false);
+  const [kisError,       setKisError]       = useState("");
+  const [kisLastUpdated, setKisLastUpdated] = useState(null);
+
   const MAIN_TABS = [
     { id: "legacy", label: "📊 기존 분석" },
     { id: "kis",    label: "⚡ 영욱문 종베(KIS)" },
@@ -3176,7 +3201,14 @@ function ClosingTab({ C, stocks, loading, loadedCount, error, lastUpdated, onRel
       </div>
 
       {/* ── KIS 종가베팅 탭 ── */}
-      {mainTab === "kis" && <KisClosingBetTab C={C} />}
+      <div style={{ display: mainTab === "kis" ? "flex" : "none", flexDirection: "column", gap: 12 }}>
+        <KisClosingBetTab C={C}
+          result={kisResult}           setResult={setKisResult}
+          loading={kisLoading}         setLoading={setKisLoading}
+          error={kisError}             setError={setKisError}
+          lastUpdated={kisLastUpdated} setLastUpdated={setKisLastUpdated}
+        />
+      </div>
 
       {/* ── 기존 분석 탭 ── */}
       {mainTab === "legacy" && (() => {
